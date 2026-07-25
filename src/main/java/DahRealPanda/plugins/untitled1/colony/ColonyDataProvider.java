@@ -45,6 +45,9 @@ public final class ColonyDataProvider {
 
     private static final String COLONY_MANAGER = "com.minecolonies.api.colony.IColonyManager";
 
+    /** MineColonies over-reports warehouse rack stock by this factor; counts are divided by it. */
+    private static final int WAREHOUSE_COUNT_DIVISOR = 3;
+
     private final MinecraftServer server;
 
     public ColonyDataProvider(MinecraftServer server) {
@@ -153,6 +156,12 @@ public final class ColonyDataProvider {
                 snap.warehouse.present = true;
                 aggregateWarehouse(level, building, pos, snap.warehouse, countedContainers);
             }
+        }
+
+        // MineColonies (this build) reports warehouse rack contents ~3x the actual amount.
+        // Normalize the aggregated counts before they feed the UI and the "in warehouse" column.
+        for (ColonySnapshot.Stack s : snap.warehouse.stacks) {
+            s.count = Math.max(0, Math.round(s.count / (float) WAREHOUSE_COUNT_DIVISOR));
         }
 
         // Work orders + builder linkage.
