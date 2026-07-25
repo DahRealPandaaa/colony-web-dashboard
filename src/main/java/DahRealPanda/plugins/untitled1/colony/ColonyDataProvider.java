@@ -23,9 +23,11 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 
 import static DahRealPanda.plugins.untitled1.colony.MineColoniesReflect.fieldValue;
 import static DahRealPanda.plugins.untitled1.colony.MineColoniesReflect.invoke;
@@ -513,16 +515,22 @@ public final class ColonyDataProvider {
         if (level == null) {
             return handlers;
         }
-        List<BlockPos> positions = new ArrayList<>();
-        positions.add(hutPos);
+        // De-duplicate positions: MineColonies' getContainers() can return the same rack
+        // position many times, which would otherwise multiply every item count.
+        Set<BlockPos> positions = new LinkedHashSet<>();
         Object containers = invoke(building, "getContainers").orElse(null);
         if (containers instanceof Collection<?> c) {
             for (Object o : c) {
                 BlockPos p = blockPosOf(o);
                 if (p != null) {
-                    positions.add(p);
+                    positions.add(p.immutable());
                 }
             }
+        }
+        // Only use the hut block itself when there are no registered containers, so a
+        // warehouse controller's combined view is never counted on top of its racks.
+        if (positions.isEmpty()) {
+            positions.add(hutPos.immutable());
         }
         for (BlockPos p : positions) {
             BlockEntity be = level.getBlockEntity(p);
