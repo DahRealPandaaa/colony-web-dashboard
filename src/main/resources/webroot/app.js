@@ -194,7 +194,7 @@ document.addEventListener("alpine:init", () => {
             return list.sort((a, b) => b.count - a.count);
         },
 
-        get filteredWarehouse() {
+        get filteredWarehouseAll() {
             const wh = this.snap.warehouse || { stacks: [] };
             let list = (wh.stacks || []).slice();
             const q = this.whSearch.trim().toLowerCase();
@@ -206,6 +206,15 @@ document.addEventListener("alpine:init", () => {
             return this.sortWarehouse(list, this.whSort);
         },
 
+        // Only render a capped number of rows in the sidebar to keep the DOM/image count low.
+        get filteredWarehouse() {
+            return this.filteredWarehouseAll.slice(0, 60);
+        },
+
+        get warehouseTruncated() {
+            return this.filteredWarehouseAll.length - 60;
+        },
+
         warehouseModalList() {
             const wh = this.snap.warehouse || { stacks: [] };
             let list = (wh.stacks || []).slice();
@@ -215,7 +224,7 @@ document.addEventListener("alpine:init", () => {
                     (s) => (s.name || "").toLowerCase().includes(q) || (s.material || "").toLowerCase().includes(q)
                 );
             }
-            return this.sortWarehouse(list, this.whModalSort);
+            return this.sortWarehouse(list, this.whModalSort).slice(0, 200);
         },
 
         builderInfo(builder) {

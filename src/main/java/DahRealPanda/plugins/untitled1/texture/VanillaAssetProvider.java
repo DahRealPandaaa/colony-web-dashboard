@@ -34,6 +34,7 @@ public final class VanillaAssetProvider {
     private final Path clientJar;
     private volatile boolean ready;
     private volatile boolean attempted;
+    private volatile ZipFile clientZip;
 
     public VanillaAssetProvider(String minecraftVersion, Path baseDir) {
         this.minecraftVersion = minecraftVersion;
@@ -85,7 +86,11 @@ public final class VanillaAssetProvider {
             return null;
         }
         String entryName = "assets/minecraft/" + assetPath;
-        try (ZipFile zip = new ZipFile(clientJar.toFile())) {
+        try {
+            ZipFile zip = jar();
+            if (zip == null) {
+                return null;
+            }
             ZipEntry entry = zip.getEntry(entryName);
             if (entry == null) {
                 return null;
@@ -105,7 +110,11 @@ public final class VanillaAssetProvider {
             return null;
         }
         String entryName = "assets/minecraft/" + assetPath;
-        try (ZipFile zip = new ZipFile(clientJar.toFile())) {
+        try {
+            ZipFile zip = jar();
+            if (zip == null) {
+                return null;
+            }
             ZipEntry entry = zip.getEntry(entryName);
             if (entry == null) {
                 return null;
@@ -116,6 +125,24 @@ public final class VanillaAssetProvider {
         } catch (IOException e) {
             return null;
         }
+    }
+
+    /** Lazily open and cache a single shared {@link ZipFile} (thread-safe for concurrent reads). */
+    private ZipFile jar() {
+        ZipFile zip = clientZip;
+        if (zip == null) {
+            synchronized (this) {
+                if (clientZip == null && Files.isRegularFile(clientJar)) {
+                    try {
+                        clientZip = new ZipFile(clientJar.toFile());
+                    } catch (IOException e) {
+                        LOGGER.warn("[ColonyWeb] could not open cached client jar", e);
+                    }
+                }
+                zip = clientZip;
+            }
+        }
+        return zip;
     }
 
     private String findVersionJsonUrl() throws IOException {
