@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Colony Dashboard</title>
+    <title>MineColonies Dashboard</title>
     <link rel="stylesheet" href="/style.css">
     <script src="/app.js"></script>
     <script src="/vendor/alpine.min.js" defer></script>
@@ -11,133 +11,185 @@
 <body>
 <div x-data="dashboard()" x-init="init()" x-cloak>
 
+    <!-- Header -->
     <header class="topbar">
+        <div class="header-bg"></div>
         <div class="brand">
-            <span class="logo">⛏</span>
-            <h1>Colony Dashboard</h1>
+            <span class="logo">
+                <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M3 21h18"/><path d="M5 21V8l7-5 7 5v13"/><path d="M9 21v-6h6v6"/>
+                </svg>
+            </span>
+            <h1>MineColonies <span>dashboard</span></h1>
         </div>
-        <div class="controls">
-            <div class="select-wrap" x-show="colonies.length">
+        <div class="colony-picker" x-show="colonies.length">
+            <label>Colony:</label>
+            <div class="select-wrap">
                 <select x-model.number="colonyId" @change="selectColony(colonyId)">
                     <template x-for="c in colonies" :key="c.id">
-                        <option :value="c.id" x-text="c.name + ' (#' + c.id + ') · ' + c.buildingCount + ' buildings'"></option>
+                        <option :value="c.id" x-text="'✦ ' + c.name" ></option>
                     </template>
                 </select>
             </div>
-            <span class="status" :class="connection">
-                <span class="dot"></span>
-                <span x-text="connection === 'live' ? 'live' : (connection === 'down' ? 'reconnecting…' : 'connecting…')"></span>
-            </span>
         </div>
     </header>
 
-    <main>
-        <!-- Toolbar -->
-        <section class="toolbar">
-            <div class="search">
-                <span class="search-icon">🔍</span>
-                <input type="search" placeholder="Search buildings, items or materials…" x-model="search">
-                <button class="clear" x-show="search" @click="search=''" title="Clear">✕</button>
+    <!-- Three-column layout -->
+    <div class="layout">
+
+        <!-- Builders sidebar -->
+        <aside class="col left">
+            <div class="col-head">
+                <h2>Builders Panel</h2>
             </div>
-            <div class="tools">
-                <label class="toggle">
+            <div class="col-scroll">
+                <template x-for="b in snap.builders" :key="b.id">
+                    <div class="builder-card">
+                        <div class="avatar">
+                            <svg viewBox="0 0 24 24" width="26" height="26"><rect width="24" height="24" rx="6" fill="#2a4a3a"/><circle cx="12" cy="9" r="4" fill="#8fe3b0"/><path d="M4 21c0-4 3.6-6 8-6s8 2 8 6" fill="#8fe3b0"/></svg>
+                        </div>
+                        <div class="builder-body">
+                            <template x-if="!builderInfo(b).idle">
+                                <div>
+                                    <div class="builder-top">
+                                        <span class="ba" :class="badgeClass(builderInfo(b).action)" x-text="builderInfo(b).action"></span>
+                                    </div>
+                                    <div class="builder-name">
+                                        <span x-text="builderInfo(b).building"></span>
+                                        <span class="lvl" x-text="builderInfo(b).current + ' → ' + builderInfo(b).target"></span>
+                                    </div>
+                                    <div class="progress"><span :style="'width:' + builderInfo(b).pct + '%'"></span></div>
+                                    <div class="builder-foot">
+                                        <span class="pct" x-text="builderInfo(b).pct.toFixed ? builderInfo(b).pct.toFixed(2) + '%' : builderInfo(b).pct + '%'"></span>
+                                        <span class="who" x-text="b.name"></span>
+                                    </div>
+                                </div>
+                            </template>
+                            <template x-if="builderInfo(b).idle">
+                                <div>
+                                    <div class="builder-name"><span x-text="b.name"></span></div>
+                                    <div class="idle">Idle</div>
+                                </div>
+                            </template>
+                        </div>
+                    </div>
+                </template>
+                <div class="empty" x-show="!snap.builders.length">No builders assigned.</div>
+            </div>
+        </aside>
+
+        <!-- Buildings center -->
+        <section class="col center">
+            <div class="toolbar">
+                <div class="search">
+                    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
+                    <input type="search" placeholder="Search…" x-model="search">
+                    <button class="clear" x-show="search" @click="search=''">✕</button>
+                </div>
+                <label class="switch">
                     <input type="checkbox" x-model="onlyInProgress">
-                    <span>In&nbsp;progress only</span>
+                    <span class="track"></span>
+                    <span class="switch-label">In Progress Only</span>
+                </label>
+                <label class="switch">
+                    <input type="checkbox" x-model="showDecorations">
+                    <span class="track"></span>
+                    <span class="switch-label">Show Decorations</span>
                 </label>
                 <div class="sortbox">
-                    <label>Sort</label>
+                    <span>Sort by:</span>
                     <select x-model="sort">
-                        <option value="status">Status (missing first)</option>
+                        <option value="status">Missing First</option>
                         <option value="progress">Progress</option>
                         <option value="name">Name</option>
                         <option value="level">Level</option>
                     </select>
                 </div>
             </div>
-        </section>
 
-        <!-- Builders -->
-        <section class="panel">
-            <h2>Builders <span class="muted" x-text="'(' + snap.builders.length + ')'"></span></h2>
-            <div class="builders-grid" x-show="snap.builders.length">
-                <template x-for="b in snap.builders" :key="b.id">
-                    <div class="builder">
-                        <div class="name" x-text="b.name || 'Builder'"></div>
-                        <div class="task" x-text="builderTask(b).text"></div>
-                        <div class="progress"><span :style="'width:' + builderTask(b).pct + '%'"></span></div>
-                    </div>
-                </template>
+            <div class="col-head between">
+                <h2>Buildings &amp; Decorations</h2>
+                <span class="count-pill" x-text="filteredBuildings.length"></span>
             </div>
-            <div class="empty" x-show="!snap.builders.length">No builders assigned.</div>
-        </section>
 
-        <!-- Buildings -->
-        <section class="panel">
-            <h2>
-                Buildings &amp; Decorations
-                <span class="muted" x-text="'(' + filteredBuildings.length + ')'"></span>
-            </h2>
-            <div class="cards" x-show="filteredBuildings.length">
-                <template x-for="b in filteredBuildings" :key="b.id">
-                    <article class="card" :class="{ 'is-deco': b.kind === 'decoration', 'active': b.beingBuilt }"
-                             @click="openBuilding(b)" tabindex="0" @keydown.enter="openBuilding(b)">
-                        <div class="card-head">
-                            <span class="title" x-text="b.name"></span>
-                            <span class="tag deco" x-show="b.kind === 'decoration'">Decoration</span>
-                        </div>
-                        <div class="sub">
-                            <span x-show="b.kind !== 'decoration'"
-                                  x-text="workOrderTargetLevel(b) ? ('lvl ' + b.level + ' → ' + workOrderTargetLevel(b)) : ('lvl ' + b.level)"></span>
-                            <span class="pos" x-text="b.x + ', ' + b.y + ', ' + b.z"></span>
-                        </div>
-                        <div class="builtby" x-show="b.beingBuilt">
-                            <span class="badge" x-text="builtBy(b) ? ('being built by ' + builtBy(b)) : 'in progress'"></span>
-                        </div>
-                        <div class="progress" x-show="b.beingBuilt">
-                            <span :style="'width:' + buildingProgress(b) + '%'"></span>
-                        </div>
-                        <div class="chips" x-show="(b.required || []).length">
-                            <span class="chip ok" x-show="buildingCounts(b).ok" x-text="buildingCounts(b).ok + ' ok'"></span>
-                            <span class="chip deliver" x-show="buildingCounts(b).deliver" x-text="buildingCounts(b).deliver + ' deliverable'"></span>
-                            <span class="chip missing" x-show="buildingCounts(b).missing" x-text="buildingCounts(b).missing + ' missing'"></span>
-                        </div>
-                        <div class="preview" x-show="(b.required || []).length">
-                            <template x-for="r in b.required.slice(0, 8)" :key="r.itemKey">
-                                <img class="icon" loading="lazy" :src="textureUrl(r.itemKey)" :alt="r.name" :title="r.name">
-                            </template>
-                            <span class="more" x-show="b.required.length > 8" x-text="'+' + (b.required.length - 8)"></span>
-                        </div>
-                        <div class="open-hint">Click to open ▸</div>
-                    </article>
-                </template>
-            </div>
-            <div class="empty" x-show="!filteredBuildings.length">
-                <span x-show="search || onlyInProgress">No buildings match your filters.</span>
-                <span x-show="!search && !onlyInProgress">No buildings. Is a colony founded and MineColonies installed?</span>
+            <div class="col-scroll">
+                <div class="cards">
+                    <template x-for="b in filteredBuildings" :key="b.id">
+                        <article class="bcard" :class="{ 'is-deco': b.kind === 'decoration', 'active': b.beingBuilt }"
+                                 @click="openBuilding(b)" tabindex="0" @keydown.enter="openBuilding(b)">
+                            <span class="deco-badge" x-show="b.kind === 'decoration'">DECORATION</span>
+                            <div class="bcard-head">
+                                <img class="bicon" loading="lazy" :src="buildingIconUrl(b)" :alt="b.name">
+                                <div class="bcard-title">
+                                    <span class="tname" x-text="b.name"></span>
+                                    <span class="tlvl">
+                                        Level:
+                                        <b x-text="workOrderTargetLevel(b) ? (b.level + ' → ' + workOrderTargetLevel(b)) : b.level"></b>
+                                    </span>
+                                </div>
+                                <span class="dots">⋮</span>
+                            </div>
+                            <div class="builtby" x-show="b.beingBuilt">
+                                Being built by: <b x-text="builtBy(b) || '—'"></b>
+                            </div>
+                            <div class="progress" x-show="b.beingBuilt"><span :style="'width:' + buildingProgress(b) + '%'"></span></div>
+                            <div class="statusrow" x-show="(b.required || []).length">
+                                <span class="sdot ok" x-show="buildingCounts(b).ok"><i></i><b x-text="buildingCounts(b).ok"></b></span>
+                                <span class="sdot deliver" x-show="buildingCounts(b).deliver"><i></i><b x-text="buildingCounts(b).deliver"></b></span>
+                                <span class="sdot missing" x-show="buildingCounts(b).missing"><i></i><b x-text="buildingCounts(b).missing"></b></span>
+                                <span class="mini-icons">
+                                    <template x-for="r in b.required.slice(0, 5)" :key="r.itemKey">
+                                        <img class="mini" loading="lazy" :src="textureUrl(r.itemKey)" :alt="r.name" :title="r.name">
+                                    </template>
+                                </span>
+                            </div>
+                        </article>
+                    </template>
+                </div>
+                <div class="empty" x-show="!filteredBuildings.length">
+                    <span x-show="search || onlyInProgress || !showDecorations">No buildings match your filters.</span>
+                    <span x-show="!search && !onlyInProgress && showDecorations">No buildings found.</span>
+                </div>
             </div>
         </section>
 
-        <!-- Warehouse -->
-        <section class="panel">
-            <h2>Warehouse <span class="muted" x-text="'(' + (snap.warehouse.stacks ? snap.warehouse.stacks.length : 0) + ')'"></span></h2>
-            <div class="wh-search" x-show="snap.warehouse.present">
-                <input type="search" placeholder="Search warehouse…" x-model="whSearch">
+        <!-- Warehouse sidebar -->
+        <aside class="col right">
+            <div class="col-head warehouse-head" @click="openWarehouse()" title="Open full warehouse">
+                <div>
+                    <h2>Warehouse Overview</h2>
+                    <span class="subtle">Total stock in aggregated</span>
+                </div>
+                <span class="expand">⤢</span>
             </div>
-            <div class="warehouse-grid" x-show="filteredWarehouse.length">
+            <div class="wh-controls">
+                <div class="search small">
+                    <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
+                    <input type="search" placeholder="Search" x-model="whSearch">
+                </div>
+                <div class="sortbox small">
+                    <span>Sort by</span>
+                    <select x-model="whSort">
+                        <option value="count">count</option>
+                        <option value="alpha">alphabetically</option>
+                    </select>
+                </div>
+            </div>
+            <div class="col-scroll">
                 <template x-for="s in filteredWarehouse" :key="s.itemKey">
-                    <div class="wh-item" :title="s.name">
-                        <img class="icon" loading="lazy" :src="textureUrl(s.itemKey)" :alt="s.name">
+                    <div class="wh-row" :title="s.name">
+                        <img class="mini" loading="lazy" :src="textureUrl(s.itemKey)" :alt="s.name">
                         <div class="wh-text">
                             <span class="wh-name" x-text="s.name"></span>
                             <span class="wh-mat" x-show="s.material" x-text="s.material"></span>
                         </div>
-                        <span class="count" x-text="s.count"></span>
+                        <span class="wh-count" x-text="s.count"></span>
                     </div>
                 </template>
+                <div class="empty" x-show="!filteredWarehouse.length">No stock.</div>
             </div>
-            <div class="empty" x-show="!filteredWarehouse.length">No warehouse stock to show.</div>
-        </section>
-    </main>
+        </aside>
+    </div>
 
     <!-- Building detail modal -->
     <div class="modal-overlay" x-show="modal" @click.self="closeModal()" @keydown.escape.window="closeModal()" x-transition.opacity>
@@ -145,69 +197,111 @@
             <template x-if="modal">
                 <div>
                     <div class="modal-head">
-                        <div>
-                            <h3 x-text="modal.name"></h3>
-                            <div class="modal-sub">
-                                <span class="tag deco" x-show="modal.kind === 'decoration'">Decoration</span>
-                                <span x-show="modal.kind !== 'decoration'"
-                                      x-text="workOrderTargetLevel(modal) ? ('Level ' + modal.level + ' → ' + workOrderTargetLevel(modal)) : ('Level ' + modal.level)"></span>
-                                <span class="pos" x-text="modal.x + ', ' + modal.y + ', ' + modal.z"></span>
-                                <span class="badge" x-show="modal.beingBuilt" x-text="builtBy(modal) ? ('built by ' + builtBy(modal)) : 'in progress'"></span>
+                        <div class="mtitle">
+                            <img class="bicon big" loading="lazy" :src="buildingIconUrl(modal)" :alt="modal.name">
+                            <div>
+                                <h3>
+                                    <span x-text="modal.name"></span>
+                                    <span class="ba" :class="badgeClass(actionOf(modal))" x-show="actionOf(modal)" x-text="actionOf(modal)"></span>
+                                    <span class="deco-badge inline" x-show="modal.kind === 'decoration'">DECORATION</span>
+                                </h3>
+                                <div class="modal-sub">
+                                    <span x-show="workOrderTargetLevel(modal)" x-text="modal.level + ' → ' + workOrderTargetLevel(modal)"></span>
+                                    <span class="pos" x-text="modal.x + ', ' + modal.y + ', ' + modal.z"></span>
+                                </div>
                             </div>
                         </div>
                         <button class="close" @click="closeModal()">✕</button>
                     </div>
 
                     <div class="modal-progress" x-show="modal.beingBuilt">
-                        <div class="progress big"><span :style="'width:' + buildingProgress(modal) + '%'"></span></div>
-                        <span x-text="buildingProgress(modal) + '%'"></span>
-                    </div>
-
-                    <div class="modal-search" x-show="(modal.required || []).length">
-                        <input type="search" placeholder="Search items in this building…" x-model="modalSearch">
-                        <div class="legend">
-                            <span class="chip ok">enough</span>
-                            <span class="chip deliver">deliverable</span>
-                            <span class="chip missing">missing</span>
+                        <img class="avatar-sm" loading="lazy" :src="'/textures/' + encodeURIComponent('minecolonies:blockhutbuilder') + '.png'" alt="">
+                        <div class="mp-body">
+                            <div class="progress big"><span :style="'width:' + buildingProgress(modal) + '%'"></span></div>
+                            <div class="mp-foot">
+                                <span x-show="builtBy(modal)">Being built by: <b x-text="builtBy(modal)"></b></span>
+                                <span x-text="buildingProgress(modal) + '%'"></span>
+                            </div>
                         </div>
                     </div>
 
-                    <div class="modal-body">
-                        <table class="resources" x-show="modalResources().length">
-                            <thead>
-                            <tr><th>Item</th><th>Need</th><th>Hut</th><th>Warehouse</th><th>Status</th></tr>
-                            </thead>
-                            <tbody>
-                            <template x-for="r in modalResources()" :key="r.itemKey">
-                                <tr :class="'row-' + statusOf(r)">
-                                    <td>
-                                        <span class="itemcell">
-                                            <img class="icon" loading="lazy" :src="textureUrl(r.itemKey)" :alt="r.name">
-                                            <span class="itemtext">
-                                                <span x-text="r.name"></span>
-                                                <span class="mat" x-show="r.material" x-text="'Material: ' + r.material"></span>
-                                            </span>
-                                        </span>
-                                    </td>
-                                    <td x-text="r.needed"></td>
-                                    <td x-text="r.inHut"></td>
-                                    <td x-text="r.inWarehouse"></td>
-                                    <td><span class="pill" :class="statusOf(r)" x-text="statusLabel(r)"></span></td>
-                                </tr>
-                            </template>
-                            </tbody>
-                        </table>
-                        <div class="empty" x-show="!modalResources().length && (modal.required || []).length">No items match your search.</div>
-                        <div class="empty" x-show="!(modal.required || []).length">No pending requirements for this building.</div>
+                    <div class="modal-section">
+                        <div class="section-head">
+                            <h4>Resource Table</h4>
+                            <div class="search small" x-show="(modal.required || []).length">
+                                <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
+                                <input type="search" placeholder="Search" x-model="modalSearch">
+                            </div>
+                        </div>
+                        <div class="table-wrap">
+                            <table class="resources" x-show="modalResources().length">
+                                <thead>
+                                <tr><th>Icon</th><th>Item Name</th><th>Needed</th><th>In Hut</th><th>In Warehouse</th><th>Status</th></tr>
+                                </thead>
+                                <tbody>
+                                <template x-for="r in modalResources()" :key="r.itemKey">
+                                    <tr :class="'row-' + statusOf(r)">
+                                        <td><img class="mini" loading="lazy" :src="textureUrl(r.itemKey)" :alt="r.name"></td>
+                                        <td class="iname">
+                                            <span x-text="r.name"></span>
+                                            <span class="mat" x-show="r.material" x-text="'(+ Domum: ' + r.material + ')'"></span>
+                                        </td>
+                                        <td x-text="r.needed"></td>
+                                        <td x-text="r.inHut"></td>
+                                        <td x-text="r.inWarehouse"></td>
+                                        <td><span class="pill" :class="statusOf(r)" x-text="statusLabel(r)"></span></td>
+                                    </tr>
+                                </template>
+                                </tbody>
+                            </table>
+                            <div class="empty" x-show="!modalResources().length && (modal.required || []).length">No items match your search.</div>
+                            <div class="empty" x-show="!(modal.required || []).length">No pending requirements.</div>
+                        </div>
                     </div>
                 </div>
             </template>
         </div>
     </div>
 
-    <footer>
-        <span>Server-side MineColonies dashboard · read-only · updates live via SSE</span>
-    </footer>
+    <!-- Warehouse modal -->
+    <div class="modal-overlay" x-show="warehouseOpen" @click.self="closeWarehouse()" @keydown.escape.window="closeWarehouse()" x-transition.opacity>
+        <div class="modal" x-show="warehouseOpen" x-transition>
+            <div class="modal-head">
+                <h3>Warehouse Stock</h3>
+                <button class="close" @click="closeWarehouse()">✕</button>
+            </div>
+            <div class="section-head">
+                <div class="sortbox small">
+                    <span>Sort by</span>
+                    <select x-model="whModalSort">
+                        <option value="count">count</option>
+                        <option value="alpha">alphabetically</option>
+                    </select>
+                </div>
+                <div class="search small">
+                    <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
+                    <input type="search" placeholder="Search" x-model="whModalSearch">
+                </div>
+            </div>
+            <div class="table-wrap">
+                <table class="resources">
+                    <thead><tr><th>Icon</th><th>Item Name</th><th>Material</th><th>Count</th></tr></thead>
+                    <tbody>
+                    <template x-for="s in warehouseModalList()" :key="s.itemKey">
+                        <tr>
+                            <td><img class="mini" loading="lazy" :src="textureUrl(s.itemKey)" :alt="s.name"></td>
+                            <td class="iname" x-text="s.name"></td>
+                            <td class="muted" x-text="s.material || '—'"></td>
+                            <td x-text="s.count"></td>
+                        </tr>
+                    </template>
+                    </tbody>
+                </table>
+                <div class="empty" x-show="!warehouseModalList().length">No stock to show.</div>
+            </div>
+        </div>
+    </div>
+
 </div>
 </body>
 </html>

@@ -10,11 +10,17 @@ document.addEventListener("alpine:init", () => {
         search: "",
         sort: "status",
         onlyInProgress: false,
+        showDecorations: true,
         connection: "connecting",
 
         modal: null,
         modalSearch: "",
+
         whSearch: "",
+        whSort: "count",
+        warehouseOpen: false,
+        whModalSearch: "",
+        whModalSort: "count",
 
         init() {
             this.loadColonies();
@@ -60,7 +66,6 @@ document.addEventListener("alpine:init", () => {
             try {
                 const snap = await this.fetchJson("/api/colony/" + id);
                 this.snap = snap;
-                // Keep the modal in sync with refreshed data.
                 if (this.modal) {
                     this.modal = snap.buildings.find((b) => b.id === this.modal.id) || null;
                 }
@@ -73,6 +78,11 @@ document.addEventListener("alpine:init", () => {
             return this.colonies.find((c) => c.id === this.colonyId) || null;
         },
 
+        get colonyName() {
+            const c = this.currentColony;
+            return c ? c.name : "—";
+        },
+
         // ---- resource / building status ----
         statusOf(r) {
             if (r.inHut >= r.needed) return "ok";
@@ -82,7 +92,7 @@ document.addEventListener("alpine:init", () => {
 
         statusLabel(r) {
             const s = this.statusOf(r);
-            return s === "ok" ? "enough" : (s === "deliver" ? "deliverable" : "missing");
+            return s === "ok" ? "Enough" : (s === "deliver" ? "Deliverable" : "Missing");
         },
 
         workOrder(b) {
@@ -92,6 +102,11 @@ document.addEventListener("alpine:init", () => {
         workOrderTargetLevel(b) {
             const wo = this.workOrder(b);
             return wo ? wo.targetLevel : 0;
+        },
+
+        actionOf(b) {
+            const wo = this.workOrder(b);
+            return wo ? wo.action : null;
         },
 
         buildingProgress(b) {
@@ -110,6 +125,16 @@ document.addEventListener("alpine:init", () => {
             return wo && wo.builderName ? wo.builderName : null;
         },
 
+        // Building icon: MineColonies hut block for buildings, first material for decorations.
+        buildingIconUrl(b) {
+            if (b.kind === "decoration") {
+                const r = (b.required || [])[0];
+                return r ? this.textureUrl(r.itemKey) : this.textureUrl("minecolonies:blockhutbuilder");
+            }
+            const path = (b.type || "").split(":").pop().replace(/[^a-z0-9_]/g, "");
+            return this.textureUrl("minecolonies:blockhut" + path);
+        },
+
         matchesSearch(b, q) {
             if (!q) return true;
             q = q.toLowerCase();
@@ -122,6 +147,7 @@ document.addEventListener("alpine:init", () => {
         // ---- derived lists ----
         get filteredBuildings() {
             let list = (this.snap.buildings || []).slice();
+            if (!this.showDecorations) list = list.filter((b) => b.kind !== "decoration");
             if (this.onlyInProgress) list = list.filter((b) => b.beingBuilt);
             const q = this.search.trim();
             if (q) list = list.filter((b) => this.matchesSearch(b, q));
@@ -131,7 +157,6 @@ document.addEventListener("alpine:init", () => {
                 if (key === "name") return (a.name || "").localeCompare(b.name || "");
                 if (key === "progress") return this.buildingProgress(b) - this.buildingProgress(a);
                 if (key === "level") return b.level - a.level;
-                // status: in-progress first, then most missing
                 const ap = a.beingBuilt ? 1 : 0;
                 const bp = b.beingBuilt ? 1 : 0;
                 if (ap !== bp) return bp - ap;
@@ -154,6 +179,13 @@ document.addEventListener("alpine:init", () => {
             return list;
         },
 
+        sortWarehouse(list, mode) {
+            if (mode === "alpha") {
+                return list.sort((a, b) => (a.name || "").localeCompare(b.name || ""));
+            }
+            return list.sort((a, b) => b.count - a.count);
+        },
+
         get filteredWarehouse() {
             const wh = this.snap.warehouse || { stacks: [] };
             let list = (wh.stacks || []).slice();
@@ -163,28 +195,56 @@ document.addEventListener("alpine:init", () => {
                     (s) => (s.name || "").toLowerCase().includes(q) || (s.material || "").toLowerCase().includes(q)
                 );
             }
-            list.sort((a, b) => b.count - a.count);
-            return list;
+            return this.sortWarehouse(list, this.whSort);
         },
 
-        builderTask(builder) {
+        warehouseModalList() {
+            const wh = this.snap.warehouse || { stacks: [] };
+            let list = (wh.stacks || []).slice();
+            const q = this.whModalSearch.trim().toLowerCase();
+            if (q) {
+                list = list.filter(
+                    (s) => (s.name || "").toLowerCase().includes(q) || (s.material || "").toLowerCase().includes(q)
+                );
+            }
+            return this.sortWarehouse(list, this.whModalSort);
+        },
+
+        builderInfo(builder) {
             const wo = this.snap.workOrders.find((w) => w.id === builder.assignedWorkOrderId);
-            if (!wo) return { text: "Idle", pct: 0 };
-            const name = wo.buildingName || wo.buildingType || "?";
+            if (!wo) return { idle: true, pct: 0 };
             return {
-                text: name + " → lvl " + wo.targetLevel + " (" + wo.action + ")",
+                idle: false,
+                action: wo.action,
+                building: wo.buildingName || wo.buildingType || "?",
+                current: wo.currentLevel,
+                target: wo.targetLevel,
                 pct: Math.round((wo.progress || 0) * 100),
             };
         },
 
-        // ---- modal ----
+        badgeClass(action) {
+            if (!action) return "";
+            const a = action.toUpperCase();
+            if (a === "UPGRADE") return "b-upgrade";
+            if (a === "BUILD") return "b-build";
+            if (a === "REPAIR") return "b-repair";
+            if (a === "REMOVE") return "b-remove";
+            return "";
+        },
+
+        // ---- modals ----
         openBuilding(b) {
             this.modal = b;
             this.modalSearch = "";
         },
-        closeModal() {
-            this.modal = null;
+        closeModal() { this.modal = null; },
+
+        openWarehouse() {
+            this.warehouseOpen = true;
+            this.whModalSearch = "";
         },
+        closeWarehouse() { this.warehouseOpen = false; },
 
         // ---- live updates ----
         connectEvents() {
