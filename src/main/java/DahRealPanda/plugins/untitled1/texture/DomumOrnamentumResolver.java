@@ -1,8 +1,10 @@
 package DahRealPanda.plugins.untitled1.texture;
 
+import DahRealPanda.plugins.untitled1.colony.MineColoniesReflect;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.Tag;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.world.item.BlockItem;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.Block;
 import net.minecraftforge.registries.ForgeRegistries;
@@ -10,6 +12,7 @@ import net.minecraftforge.registries.ForgeRegistries;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 import java.util.TreeMap;
@@ -97,7 +100,7 @@ public final class DomumOrnamentumResolver {
         return names.isEmpty() ? Optional.empty() : Optional.of(String.join(" + ", names));
     }
 
-    /** Collect the material block registry names from a DO stack (deterministic order). */
+    /** Collect the material block registry names from a DO stack (primary component first). */
     private static List<String> materialBlockIds(ItemStack stack) {
         List<String> result = new ArrayList<>();
         if (!stack.hasTag()) {
@@ -107,7 +110,17 @@ public final class DomumOrnamentumResolver {
         if (textureData == null) {
             return result;
         }
-        // Deterministic ordering by component key.
+        // Prefer the block's defined component order so the *primary* material is first
+        // (e.g. the shingle material rather than the support material).
+        for (String componentId : componentOrder(stack)) {
+            if (textureData.contains(componentId, Tag.TAG_STRING)) {
+                String value = textureData.getString(componentId);
+                if (isRealBlock(value) && !result.contains(value)) {
+                    result.add(value);
+                }
+            }
+        }
+        // Add any remaining components (deterministic order) not already included.
         TreeMap<String, String> ordered = new TreeMap<>();
         for (String key : textureData.getAllKeys()) {
             Tag v = textureData.get(key);
@@ -118,8 +131,34 @@ public final class DomumOrnamentumResolver {
                 }
             }
         }
-        result.addAll(ordered.values());
+        for (String value : ordered.values()) {
+            if (!result.contains(value)) {
+                result.add(value);
+            }
+        }
         return result;
+    }
+
+    /**
+     * The DO block's material component ids in their defined order (via reflection into
+     * {@code IMateriallyTexturedBlock#getComponents()}). The first is the primary component.
+     */
+    private static List<String> componentOrder(ItemStack stack) {
+        List<String> ids = new ArrayList<>();
+        if (!(stack.getItem() instanceof BlockItem blockItem)) {
+            return ids;
+        }
+        Block block = blockItem.getBlock();
+        Object components = MineColoniesReflect.invoke(block, "getComponents").orElse(null);
+        if (components instanceof Collection<?> collection) {
+            for (Object component : collection) {
+                Object id = MineColoniesReflect.invoke(component, "getId").orElse(null);
+                if (id != null) {
+                    ids.add(String.valueOf(id));
+                }
+            }
+        }
+        return ids;
     }
 
     /** Navigate to the {@code textureData} compound (via BlockEntityTag), else search for it. */

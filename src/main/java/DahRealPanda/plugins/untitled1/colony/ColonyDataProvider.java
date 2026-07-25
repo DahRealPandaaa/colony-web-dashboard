@@ -389,31 +389,40 @@ public final class ColonyDataProvider {
 
     /** Best-effort readable name for a work order (used for decorations without a building). */
     private String workOrderName(Object wo) {
-        // Prefer an explicit display/custom name.
-        Object display = firstNonNull(
-                invoke(wo, "getCustomName").orElse(null),
-                invoke(wo, "getName").orElse(null),
-                invoke(wo, "getDisplayName").orElse(null));
-        String name = display != null ? String.valueOf(display) : null;
-        if (name != null && !name.isBlank() && !name.contains(":")) {
-            return prettyName(name);
-        }
-        // Fall back to the structure path, e.g. ".../decorations/roads/paved" -> "Paved".
+        // Prefer the structure path/name — it yields a clean id we can humanize.
         Object path = firstNonNull(
                 invoke(wo, "getStructureName").orElse(null),
-                invoke(wo, "getStructurePath").orElse(null),
-                invoke(wo, "getTranslationKey").orElse(null));
-        if (path != null) {
-            String s = String.valueOf(path);
-            int slash = Math.max(s.lastIndexOf('/'), s.lastIndexOf('.'));
-            if (slash >= 0 && slash < s.length() - 1) {
-                s = s.substring(slash + 1);
-            }
-            if (!s.isBlank()) {
-                return prettyName(s);
+                invoke(wo, "getStructurePath").orElse(null));
+        String pathStr = componentString(path);
+        if (pathStr != null && !pathStr.isBlank()) {
+            String name = humanize(pathStr);
+            if (!name.isBlank()) {
+                return name;
             }
         }
-        return name;
+        // Then an explicit custom/display name (unwrap Components, never toString() them).
+        String display = componentString(firstNonNull(
+                invoke(wo, "getCustomName").orElse(null),
+                invoke(wo, "getDisplayName").orElse(null),
+                invoke(wo, "getName").orElse(null)));
+        if (display != null && !display.isBlank()) {
+            // If it's still an id/key, humanize it; otherwise use as-is.
+            return display.contains(":") || display.matches("[A-Za-z0-9_./-]+") ? humanize(display) : display;
+        }
+        // Last resort: a translation key.
+        String key = componentString(invoke(wo, "getTranslationKey").orElse(null));
+        return key != null && !key.isBlank() ? humanize(key) : "Decoration";
+    }
+
+    /** Convert a value to a display string, unwrapping Minecraft {@link Component}s. */
+    private static String componentString(Object o) {
+        if (o == null) {
+            return null;
+        }
+        if (o instanceof net.minecraft.network.chat.Component c) {
+            return c.getString();
+        }
+        return String.valueOf(o);
     }
 
     // ------------------------------------------------------------------
@@ -580,16 +589,36 @@ public final class ColonyDataProvider {
 
     private static String prettyName(String registryName) {
         String path = pathOf(registryName);
-        if (path.isEmpty()) {
-            return "Building";
+        return humanize(path.isEmpty() ? "Building" : path);
+    }
+
+    /** Turn a raw id/path/key into a readable Title Case name (splits _, -, /, camelCase). */
+    private static String humanize(String raw) {
+        if (raw == null || raw.isBlank()) {
+            return "";
         }
-        String[] parts = path.replace("_", " ").split(" ");
+        String s = raw;
+        int slash = Math.max(s.lastIndexOf('/'), s.lastIndexOf('\\'));
+        if (slash >= 0 && slash < s.length() - 1) {
+            s = s.substring(slash + 1);
+        }
+        s = s.replaceAll("\\.(blueprint|json)$", "");
+        // Split camelCase / letter-digit boundaries and separators into spaces.
+        s = s.replaceAll("(?<=[a-z])(?=[A-Z])", " ")
+                .replaceAll("(?<=[A-Za-z])(?=[0-9])", " ")
+                .replaceAll("(?<=[0-9])(?=[A-Za-z])", " ")
+                .replace('_', ' ')
+                .replace('-', ' ')
+                .replace('.', ' ');
+        String[] parts = s.trim().split("\\s+");
         StringBuilder sb = new StringBuilder();
         for (String p : parts) {
             if (p.isEmpty()) {
                 continue;
             }
-            sb.append(Character.toUpperCase(p.charAt(0))).append(p.substring(1)).append(' ');
+            sb.append(Character.toUpperCase(p.charAt(0)))
+                    .append(p.length() > 1 ? p.substring(1) : "")
+                    .append(' ');
         }
         return sb.toString().trim();
     }
