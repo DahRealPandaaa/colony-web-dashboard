@@ -504,24 +504,74 @@ public final class ColonyDataProvider {
         for (ColonySnapshot.Stack existing : warehouse.stacks) {
             byKey.put(existing.itemKey, existing);
         }
+
+        // Preferred: MineColonies' own authoritative enumeration of warehouse contents. This
+        // reads exactly the racks the game associates with the warehouse (no combined-handler
+        // or shared-rack double counting).
+        if (aggregateViaWarehouseApi(level, pos, warehouse, byKey)) {
+            return;
+        }
+
+        // Fallback: read each rack's own inventory directly (colony-wide de-duplicated).
         for (IItemHandler handler : inventoriesFor(level, building, pos, countedContainers)) {
             for (int i = 0; i < handler.getSlots(); i++) {
                 ItemStack stack = handler.getStackInSlot(i);
                 if (stack == null || stack.isEmpty()) {
                     continue;
                 }
-                String key = DomumOrnamentumResolver.textureKeyFor(stack);
-                ColonySnapshot.Stack agg = byKey.get(key);
-                if (agg == null) {
-                    agg = new ColonySnapshot.Stack(key, stack.getHoverName().getString(), 0);
-                    agg.material = DomumOrnamentumResolver.isDomum(stack)
-                            ? DomumOrnamentumResolver.materialName(stack).orElse(null) : null;
-                    byKey.put(key, agg);
-                    warehouse.stacks.add(agg);
-                }
-                agg.count += stack.getCount();
+                addWarehouseStack(byKey, warehouse, stack);
             }
         }
+    }
+
+    /**
+     * Use {@code TileEntityWareHouse#getMatchingItemStacksInWarehouse(Predicate)} — the same
+     * method MineColonies uses to list warehouse contents — to tally stock authoritatively.
+     *
+     * @return true if the warehouse API was found and used.
+     */
+    @SuppressWarnings("unchecked")
+    private boolean aggregateViaWarehouseApi(ServerLevel level, BlockPos hutPos,
+                                             ColonySnapshot.Warehouse warehouse,
+                                             Map<String, ColonySnapshot.Stack> byKey) {
+        if (level == null) {
+            return false;
+        }
+        BlockEntity be = level.getBlockEntity(hutPos);
+        if (be == null) {
+            return false;
+        }
+        java.util.function.Predicate<ItemStack> all = stack -> true;
+        Object result = invoke(be, "getMatchingItemStacksInWarehouse",
+                new Class<?>[]{java.util.function.Predicate.class}, all).orElse(null);
+        if (!(result instanceof List<?> list)) {
+            return false;
+        }
+        for (Object entry : list) {
+            // Each entry is a Tuple<ItemStack, BlockPos>; the stack is component A.
+            ItemStack stack = itemStackOf(firstNonNull(
+                    invoke(entry, "getA").orElse(null),
+                    entry instanceof ItemStack ? entry : null));
+            if (stack == null || stack.isEmpty()) {
+                continue;
+            }
+            addWarehouseStack(byKey, warehouse, stack);
+        }
+        return true;
+    }
+
+    private void addWarehouseStack(Map<String, ColonySnapshot.Stack> byKey,
+                                   ColonySnapshot.Warehouse warehouse, ItemStack stack) {
+        String key = DomumOrnamentumResolver.textureKeyFor(stack);
+        ColonySnapshot.Stack agg = byKey.get(key);
+        if (agg == null) {
+            agg = new ColonySnapshot.Stack(key, stack.getHoverName().getString(), 0);
+            agg.material = DomumOrnamentumResolver.isDomum(stack)
+                    ? DomumOrnamentumResolver.materialName(stack).orElse(null) : null;
+            byKey.put(key, agg);
+            warehouse.stacks.add(agg);
+        }
+        agg.count += stack.getCount();
     }
 
     /**
@@ -560,11 +610,14 @@ public final class ColonyDataProvider {
             if (be == null) {
                 continue;
             }
-            // Prefer the rack's OWN inventory. A MineColonies double rack's ITEM_HANDLER
+            // Only tally actual racks. Skip the warehouse controller / anything else, whose
+            // capability would be a combined view of all racks and would double-count.
+            if (!be.getClass().getSimpleName().toLowerCase().contains("rack")) {
+                continue;
+            }
+            // Read the rack's OWN inventory. A MineColonies double rack's ITEM_HANDLER
             // capability returns a CombinedItemHandler of BOTH halves, and both halves are
             // listed in getContainers(), so reading the capability double-counts every item.
-            // getInventory() returns only this rack's own contents (this is how MineColonies
-            // itself tallies warehouse stock).
             Object ownInv = invoke(be, "getInventory").orElse(null);
             if (ownInv instanceof IItemHandler handler) {
                 handlers.add(handler);
