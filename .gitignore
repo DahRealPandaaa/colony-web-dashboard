@@ -32,3 +32,6 @@ colonyweb-cache/
 # OS files
 .DS_Store
 Thumbs.db
+
+# Tailwind standalone CLI (build tool, not committed)
+tailwindcss.exe

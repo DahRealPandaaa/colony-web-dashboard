@@ -136,6 +136,7 @@ public final class ColonyDataProvider {
             info.id = pos.hashCode();
             info.type = buildingType(building);
             info.name = prettyName(info.type);
+            info.blockId = blockIdAt(level, pos);
             info.level = intOf(invoke(building, "getBuildingLevel").orElse(null), 0);
             info.x = pos.getX();
             info.y = pos.getY();
@@ -577,6 +578,19 @@ public final class ColonyDataProvider {
             }
         }
         return server.overworld();
+    }
+
+    /** Registry id of the block placed at a position (the MineColonies hut block). */
+    private String blockIdAt(ServerLevel level, BlockPos pos) {
+        if (level == null || pos == null) {
+            return null;
+        }
+        try {
+            ResourceLocation rl = ForgeRegistries.BLOCKS.getKey(level.getBlockState(pos).getBlock());
+            return rl != null ? rl.toString() : null;
+        } catch (Throwable t) {
+            return null;
+        }
     }
 
     // ------------------------------------------------------------------

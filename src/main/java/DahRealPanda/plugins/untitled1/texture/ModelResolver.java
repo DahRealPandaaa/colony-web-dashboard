@@ -24,13 +24,18 @@ public final class ModelResolver {
      */
     public Optional<String> resolveTexture(String namespace, String path) {
         return resolveFromModel(namespace, "models/item/" + path + ".json", 0)
+                .or(() -> resolveFromModel(namespace, "models/block/" + path + ".json", 0))
                 .or(() -> {
-                    // Fallback: assume a direct item/block texture with the same path.
+                    // Fallback: assume a direct texture with the same path. MineColonies uses
+                    // the plural "blocks/" folder, vanilla uses singular "block/".
                     if (hasTexture(namespace, "textures/item/" + path + ".png")) {
                         return Optional.of(namespace + ":item/" + path);
                     }
                     if (hasTexture(namespace, "textures/block/" + path + ".png")) {
                         return Optional.of(namespace + ":block/" + path);
+                    }
+                    if (hasTexture(namespace, "textures/blocks/" + path + ".png")) {
+                        return Optional.of(namespace + ":blocks/" + path);
                     }
                     return Optional.empty();
                 });

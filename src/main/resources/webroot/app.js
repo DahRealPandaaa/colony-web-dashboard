@@ -65,6 +65,9 @@ document.addEventListener("alpine:init", () => {
         async loadColony(id) {
             try {
                 const snap = await this.fetchJson("/api/colony/" + id);
+                // Index work orders by id once per refresh (avoids repeated find() during render).
+                snap._woById = {};
+                (snap.workOrders || []).forEach((w) => { snap._woById[w.id] = w; });
                 this.snap = snap;
                 if (this.modal) {
                     this.modal = snap.buildings.find((b) => b.id === this.modal.id) || null;
@@ -96,6 +99,8 @@ document.addEventListener("alpine:init", () => {
         },
 
         workOrder(b) {
+            const idx = this.snap._woById;
+            if (idx) return idx[b.workOrderId] || null;
             return this.snap.workOrders.find((w) => w.id === b.workOrderId) || null;
         },
 
@@ -125,8 +130,11 @@ document.addEventListener("alpine:init", () => {
             return wo && wo.builderName ? wo.builderName : null;
         },
 
-        // Building icon: MineColonies hut block for buildings, first material for decorations.
+        // Building icon: prefer the real MineColonies hut block placed at the site.
         buildingIconUrl(b) {
+            if (b.blockId) {
+                return this.textureUrl(b.blockId);
+            }
             if (b.kind === "decoration") {
                 const r = (b.required || [])[0];
                 return r ? this.textureUrl(r.itemKey) : this.textureUrl("minecolonies:blockhutbuilder");

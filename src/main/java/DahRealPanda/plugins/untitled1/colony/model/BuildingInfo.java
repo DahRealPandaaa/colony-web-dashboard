@@ -11,6 +11,7 @@ public class BuildingInfo {
     public String name;
     public String type;
     public String kind = "building"; // "building" or "decoration"
+    public String blockId;           // registry id of the MineColonies hut block (icon source)
     public int level;
     public int x;
     public int y;
