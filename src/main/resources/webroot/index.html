@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Colony Web Dashboard</title>
+    <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+<header class="topbar">
+    <h1>Colony Dashboard</h1>
+    <div class="controls">
+        <label for="colonySelect">Colony</label>
+        <select id="colonySelect"></select>
+        <span id="status" class="status" title="Live connection">
+            <span class="dot"></span><span id="statusText">connecting…</span>
+        </span>
+    </div>
+</header>
+
+<main>
+    <section id="builders" class="panel">
+        <h2>Builders</h2>
+        <div id="buildersBody" class="builders-grid"></div>
+    </section>
+
+    <section id="buildings" class="panel">
+        <h2>Buildings &amp; Requirements</h2>
+        <div id="buildingsBody" class="cards"></div>
+    </section>
+
+    <section id="warehouse" class="panel">
+        <h2>Warehouse</h2>
+        <div id="warehouseBody" class="warehouse-grid"></div>
+    </section>
+</main>
+
+<footer>
+    <span>Server-side MineColonies dashboard. Read-only.</span>
+</footer>
+
+<script src="/app.js"></script>
+</body>
+</html>
