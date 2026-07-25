@@ -550,8 +550,18 @@ public final class ColonyDataProvider {
             if (be == null) {
                 continue;
             }
-            be.getCapability(ForgeCapabilities.ITEM_HANDLER)
-                    .ifPresent(handlers::add);
+            // Prefer the rack's OWN inventory. A MineColonies double rack's ITEM_HANDLER
+            // capability returns a CombinedItemHandler of BOTH halves, and both halves are
+            // listed in getContainers(), so reading the capability double-counts every item.
+            // getInventory() returns only this rack's own contents (this is how MineColonies
+            // itself tallies warehouse stock).
+            Object ownInv = invoke(be, "getInventory").orElse(null);
+            if (ownInv instanceof IItemHandler handler) {
+                handlers.add(handler);
+            } else {
+                be.getCapability(ForgeCapabilities.ITEM_HANDLER)
+                        .ifPresent(handlers::add);
+            }
         }
         return handlers;
     }
