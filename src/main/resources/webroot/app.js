@@ -1,235 +1,205 @@
 "use strict";
 
-const state = {
-    colonyId: null,
-    colonies: [],
-};
+// Registered before Alpine starts (this script loads before alpine.min.js defer).
+document.addEventListener("alpine:init", () => {
+    Alpine.data("dashboard", () => ({
+        colonies: [],
+        colonyId: null,
+        snap: { builders: [], workOrders: [], buildings: [], warehouse: { present: false, stacks: [] } },
 
-const els = {
-    select: document.getElementById("colonySelect"),
-    status: document.getElementById("status"),
-    statusText: document.getElementById("statusText"),
-    builders: document.getElementById("buildersBody"),
-    buildings: document.getElementById("buildingsBody"),
-    warehouse: document.getElementById("warehouseBody"),
-};
+        search: "",
+        sort: "status",
+        onlyInProgress: false,
+        connection: "connecting",
 
-function textureUrl(itemKey) {
-    return "/textures/" + encodeURIComponent(itemKey) + ".png";
-}
+        modal: null,
+        modalSearch: "",
+        whSearch: "",
 
-function setStatus(kind, text) {
-    els.status.classList.remove("live", "down");
-    if (kind) {
-        els.status.classList.add(kind);
-    }
-    els.statusText.textContent = text;
-}
+        init() {
+            this.loadColonies();
+            this.connectEvents();
+        },
 
-async function fetchJson(url) {
-    const res = await fetch(url, { cache: "no-store" });
-    if (!res.ok) {
-        throw new Error(url + " -> " + res.status);
-    }
-    return res.json();
-}
+        // ---- helpers ----
+        textureUrl(key) {
+            return "/textures/" + encodeURIComponent(key) + ".png";
+        },
 
-async function loadColonies() {
-    try {
-        const colonies = await fetchJson("/api/colonies");
-        state.colonies = colonies;
-        renderSelector();
-        if (state.colonyId == null && colonies.length > 0) {
-            const hash = parseInt(location.hash.replace("#", ""), 10);
-            state.colonyId = colonies.some(c => c.id === hash) ? hash : colonies[0].id;
-        }
-        if (state.colonyId != null) {
-            await loadColony(state.colonyId);
-        } else {
-            renderEmpty();
-        }
-    } catch (e) {
-        console.error(e);
-    }
-}
+        async fetchJson(url) {
+            const res = await fetch(url, { cache: "no-store" });
+            if (!res.ok) throw new Error(url + " -> " + res.status);
+            return res.json();
+        },
 
-function renderSelector() {
-    const prev = state.colonyId;
-    els.select.innerHTML = "";
-    if (state.colonies.length === 0) {
-        const opt = document.createElement("option");
-        opt.textContent = "No colonies found";
-        opt.value = "";
-        els.select.appendChild(opt);
-        return;
-    }
-    for (const c of state.colonies) {
-        const opt = document.createElement("option");
-        opt.value = String(c.id);
-        opt.textContent = `${c.name} (#${c.id}) — ${c.buildingCount} buildings`;
-        els.select.appendChild(opt);
-    }
-    if (prev != null) {
-        els.select.value = String(prev);
-    }
-}
+        // ---- data loading ----
+        async loadColonies() {
+            try {
+                const colonies = await this.fetchJson("/api/colonies");
+                this.colonies = colonies;
+                if (this.colonyId == null && colonies.length) {
+                    const hash = parseInt(location.hash.replace("#", ""), 10);
+                    this.colonyId = colonies.some((c) => c.id === hash) ? hash : colonies[0].id;
+                }
+                if (this.colonyId != null) {
+                    await this.loadColony(this.colonyId);
+                }
+            } catch (e) {
+                console.error(e);
+            }
+        },
 
-function renderEmpty() {
-    els.builders.innerHTML = '<div class="empty">No colony selected.</div>';
-    els.buildings.innerHTML = '<div class="empty">No data. Is MineColonies installed and a colony founded?</div>';
-    els.warehouse.innerHTML = '<div class="empty">No warehouse data.</div>';
-}
+        async selectColony(id) {
+            this.colonyId = id;
+            location.hash = String(id);
+            this.modal = null;
+            await this.loadColony(id);
+        },
 
-async function loadColony(id) {
-    try {
-        const snap = await fetchJson("/api/colony/" + id);
-        renderBuilders(snap);
-        renderBuildings(snap);
-        renderWarehouse(snap);
-    } catch (e) {
-        console.error(e);
-        renderEmpty();
-    }
-}
+        async loadColony(id) {
+            try {
+                const snap = await this.fetchJson("/api/colony/" + id);
+                this.snap = snap;
+                // Keep the modal in sync with refreshed data.
+                if (this.modal) {
+                    this.modal = snap.buildings.find((b) => b.id === this.modal.id) || null;
+                }
+            } catch (e) {
+                console.error(e);
+            }
+        },
 
-function renderBuilders(snap) {
-    const woById = {};
-    for (const wo of snap.workOrders || []) {
-        woById[wo.id] = wo;
-    }
-    if (!snap.builders || snap.builders.length === 0) {
-        els.builders.innerHTML = '<div class="empty">No builders assigned.</div>';
-        return;
-    }
-    els.builders.innerHTML = "";
-    for (const b of snap.builders) {
-        const wo = woById[b.assignedWorkOrderId];
-        const div = document.createElement("div");
-        div.className = "builder";
-        const task = wo
-            ? `${wo.buildingName || wo.buildingType || "?"} → level ${wo.targetLevel} (${wo.action})`
-            : "Idle";
-        const pct = wo ? Math.round((wo.progress || 0) * 100) : 0;
-        div.innerHTML =
-            `<div class="name">${escapeHtml(b.name || "Builder")}</div>` +
-            `<div class="task">${escapeHtml(task)}</div>` +
-            `<div class="progress"><span style="width:${pct}%"></span></div>`;
-        els.builders.appendChild(div);
-    }
-}
+        get currentColony() {
+            return this.colonies.find((c) => c.id === this.colonyId) || null;
+        },
 
-function renderBuildings(snap) {
-    const buildings = (snap.buildings || []).slice().sort((a, b) => {
-        return (b.beingBuilt ? 1 : 0) - (a.beingBuilt ? 1 : 0);
-    });
-    if (buildings.length === 0) {
-        els.buildings.innerHTML = '<div class="empty">No buildings.</div>';
-        return;
-    }
-    els.buildings.innerHTML = "";
-    for (const bld of buildings) {
-        const card = document.createElement("div");
-        card.className = "card";
-        const wo = (snap.workOrders || []).find(w => w.id === bld.workOrderId);
-        const levelText = wo && wo.targetLevel
-            ? `lvl ${bld.level} → ${wo.targetLevel}`
-            : `lvl ${bld.level}`;
-        const badge = bld.beingBuilt
-            ? `<span class="badge">${escapeHtml(builtBy(wo))}</span>`
-            : "";
-        let rows = "";
-        for (const r of bld.required || []) {
-            const cls = rowClass(r);
-            rows +=
-                `<tr class="${cls}">` +
-                `<td><span class="itemcell"><img class="icon" loading="lazy" src="${textureUrl(r.itemKey)}" alt="">${escapeHtml(r.name)}</span></td>` +
-                `<td>${r.needed}</td>` +
-                `<td>${r.inHut}</td>` +
-                `<td>${r.inWarehouse}</td>` +
-                `</tr>`;
-        }
-        const table = (bld.required && bld.required.length)
-            ? `<table class="resources"><thead><tr><th>Item</th><th>Need</th><th>Hut</th><th>WH</th></tr></thead><tbody>${rows}</tbody></table>`
-            : '<div class="empty">No pending requirements.</div>';
-        card.innerHTML =
-            `<div class="card-head"><span class="title">${escapeHtml(bld.name)}</span> ${badge}</div>` +
-            `<div class="level">${escapeHtml(levelText)} · ${bld.x}, ${bld.y}, ${bld.z}</div>` +
-            table;
-        els.buildings.appendChild(card);
-    }
-}
+        // ---- resource / building status ----
+        statusOf(r) {
+            if (r.inHut >= r.needed) return "ok";
+            if (r.deliverable) return "deliver";
+            return "missing";
+        },
 
-function builtBy(wo) {
-    if (wo && wo.builderName) {
-        return "built by " + wo.builderName;
-    }
-    return "in progress";
-}
+        statusLabel(r) {
+            const s = this.statusOf(r);
+            return s === "ok" ? "enough" : (s === "deliver" ? "deliverable" : "missing");
+        },
 
-function rowClass(r) {
-    if (r.inHut >= r.needed) {
-        return "row-ok";
-    }
-    if (r.deliverable) {
-        return "row-deliver";
-    }
-    return "row-missing";
-}
+        workOrder(b) {
+            return this.snap.workOrders.find((w) => w.id === b.workOrderId) || null;
+        },
 
-function renderWarehouse(snap) {
-    const wh = snap.warehouse || { present: false, stacks: [] };
-    if (!wh.present || !wh.stacks || wh.stacks.length === 0) {
-        els.warehouse.innerHTML = '<div class="empty">No warehouse or it is empty.</div>';
-        return;
-    }
-    const stacks = wh.stacks.slice().sort((a, b) => b.count - a.count);
-    els.warehouse.innerHTML = "";
-    for (const s of stacks) {
-        const div = document.createElement("div");
-        div.className = "wh-item";
-        div.innerHTML =
-            `<img class="icon" loading="lazy" src="${textureUrl(s.itemKey)}" alt="">` +
-            `<span>${escapeHtml(s.name)}</span>` +
-            `<span class="count">${s.count}</span>`;
-        els.warehouse.appendChild(div);
-    }
-}
+        workOrderTargetLevel(b) {
+            const wo = this.workOrder(b);
+            return wo ? wo.targetLevel : 0;
+        },
 
-function escapeHtml(str) {
-    return String(str == null ? "" : str)
-        .replace(/&/g, "&amp;")
-        .replace(/</g, "&lt;")
-        .replace(/>/g, "&gt;")
-        .replace(/"/g, "&quot;");
-}
+        buildingProgress(b) {
+            const wo = this.workOrder(b);
+            return wo ? Math.round((wo.progress || 0) * 100) : 0;
+        },
 
-els.select.addEventListener("change", () => {
-    const id = parseInt(els.select.value, 10);
-    if (!Number.isNaN(id)) {
-        state.colonyId = id;
-        location.hash = String(id);
-        loadColony(id);
-    }
+        buildingCounts(b) {
+            const c = { ok: 0, deliver: 0, missing: 0 };
+            (b.required || []).forEach((r) => { c[this.statusOf(r)]++; });
+            return c;
+        },
+
+        builtBy(b) {
+            const wo = this.workOrder(b);
+            return wo && wo.builderName ? wo.builderName : null;
+        },
+
+        matchesSearch(b, q) {
+            if (!q) return true;
+            q = q.toLowerCase();
+            if ((b.name || "").toLowerCase().includes(q)) return true;
+            return (b.required || []).some(
+                (r) => (r.name || "").toLowerCase().includes(q) || (r.material || "").toLowerCase().includes(q)
+            );
+        },
+
+        // ---- derived lists ----
+        get filteredBuildings() {
+            let list = (this.snap.buildings || []).slice();
+            if (this.onlyInProgress) list = list.filter((b) => b.beingBuilt);
+            const q = this.search.trim();
+            if (q) list = list.filter((b) => this.matchesSearch(b, q));
+
+            const key = this.sort;
+            list.sort((a, b) => {
+                if (key === "name") return (a.name || "").localeCompare(b.name || "");
+                if (key === "progress") return this.buildingProgress(b) - this.buildingProgress(a);
+                if (key === "level") return b.level - a.level;
+                // status: in-progress first, then most missing
+                const ap = a.beingBuilt ? 1 : 0;
+                const bp = b.beingBuilt ? 1 : 0;
+                if (ap !== bp) return bp - ap;
+                return this.buildingCounts(b).missing - this.buildingCounts(a).missing;
+            });
+            return list;
+        },
+
+        modalResources() {
+            if (!this.modal) return [];
+            let list = (this.modal.required || []).slice();
+            const q = this.modalSearch.trim().toLowerCase();
+            if (q) {
+                list = list.filter(
+                    (r) => (r.name || "").toLowerCase().includes(q) || (r.material || "").toLowerCase().includes(q)
+                );
+            }
+            const rank = { missing: 0, deliver: 1, ok: 2 };
+            list.sort((a, b) => (rank[this.statusOf(a)] - rank[this.statusOf(b)]) || (b.needed - a.needed));
+            return list;
+        },
+
+        get filteredWarehouse() {
+            const wh = this.snap.warehouse || { stacks: [] };
+            let list = (wh.stacks || []).slice();
+            const q = this.whSearch.trim().toLowerCase();
+            if (q) {
+                list = list.filter(
+                    (s) => (s.name || "").toLowerCase().includes(q) || (s.material || "").toLowerCase().includes(q)
+                );
+            }
+            list.sort((a, b) => b.count - a.count);
+            return list;
+        },
+
+        builderTask(builder) {
+            const wo = this.snap.workOrders.find((w) => w.id === builder.assignedWorkOrderId);
+            if (!wo) return { text: "Idle", pct: 0 };
+            const name = wo.buildingName || wo.buildingType || "?";
+            return {
+                text: name + " → lvl " + wo.targetLevel + " (" + wo.action + ")",
+                pct: Math.round((wo.progress || 0) * 100),
+            };
+        },
+
+        // ---- modal ----
+        openBuilding(b) {
+            this.modal = b;
+            this.modalSearch = "";
+        },
+        closeModal() {
+            this.modal = null;
+        },
+
+        // ---- live updates ----
+        connectEvents() {
+            const source = new EventSource("/events");
+            source.addEventListener("open", () => { this.connection = "live"; });
+            source.addEventListener("error", () => { this.connection = "down"; });
+            source.addEventListener("update", (ev) => {
+                let data;
+                try { data = JSON.parse(ev.data); } catch (e) { return; }
+                if (data.type === "colonies") {
+                    this.loadColonies();
+                } else if (data.type === "colony" && data.id === this.colonyId) {
+                    this.loadColony(this.colonyId);
+                }
+            });
+        },
+    }));
 });
-
-function connectEvents() {
-    const source = new EventSource("/events");
-    source.addEventListener("open", () => setStatus("live", "live"));
-    source.addEventListener("error", () => setStatus("down", "reconnecting…"));
-    source.addEventListener("update", (ev) => {
-        let data;
-        try {
-            data = JSON.parse(ev.data);
-        } catch (e) {
-            return;
-        }
-        if (data.type === "colonies") {
-            loadColonies();
-        } else if (data.type === "colony" && data.id === state.colonyId) {
-            loadColony(state.colonyId);
-        }
-    });
-}
-
-loadColonies();
-connectEvents();

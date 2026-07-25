@@ -10,6 +10,7 @@ public class BuildingInfo {
     public int id;
     public String name;
     public String type;
+    public String kind = "building"; // "building" or "decoration"
     public int level;
     public int x;
     public int y;

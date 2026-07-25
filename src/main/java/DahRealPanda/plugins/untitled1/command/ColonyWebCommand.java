@@ -5,7 +5,11 @@ import DahRealPanda.plugins.untitled1.ColonyWebService;
 import com.mojang.brigadier.CommandDispatcher;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
+import net.minecraft.network.chat.ClickEvent;
 import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.HoverEvent;
+import net.minecraft.network.chat.Style;
+import net.minecraft.ChatFormatting;
 
 import java.net.InetAddress;
 
@@ -37,7 +41,15 @@ public final class ColonyWebCommand {
 
     private static void printUrl(CommandSourceStack source) {
         String url = "http://" + resolveHost() + ":" + Config.httpPort + "/";
-        source.sendSuccess(() -> Component.literal("Colony dashboard: " + url), false);
+        // Build a clickable, underlined link component (plain text isn't clickable in chat).
+        Component link = Component.literal(url).setStyle(Style.EMPTY
+                .withColor(ChatFormatting.AQUA)
+                .withUnderlined(true)
+                .withClickEvent(new ClickEvent(ClickEvent.Action.OPEN_URL, url))
+                .withHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT,
+                        Component.literal("Open the colony dashboard"))));
+        Component message = Component.literal("Colony dashboard: ").append(link);
+        source.sendSuccess(() -> message, false);
     }
 
     private static void printStatus(CommandSourceStack source) {

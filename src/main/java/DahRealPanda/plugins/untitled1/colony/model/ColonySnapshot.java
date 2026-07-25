@@ -27,6 +27,7 @@ public class ColonySnapshot {
     public static class Stack {
         public String itemKey;
         public String name;
+        public String material; // DO material name, null when not DO
         public int count;
 
         public Stack() {

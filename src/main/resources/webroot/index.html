@@ -3,42 +3,211 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Colony Web Dashboard</title>
+    <title>Colony Dashboard</title>
     <link rel="stylesheet" href="/style.css">
+    <script src="/app.js"></script>
+    <script src="/vendor/alpine.min.js" defer></script>
 </head>
 <body>
-<header class="topbar">
-    <h1>Colony Dashboard</h1>
-    <div class="controls">
-        <label for="colonySelect">Colony</label>
-        <select id="colonySelect"></select>
-        <span id="status" class="status" title="Live connection">
-            <span class="dot"></span><span id="statusText">connecting…</span>
-        </span>
+<div x-data="dashboard()" x-init="init()" x-cloak>
+
+    <header class="topbar">
+        <div class="brand">
+            <span class="logo">⛏</span>
+            <h1>Colony Dashboard</h1>
+        </div>
+        <div class="controls">
+            <div class="select-wrap" x-show="colonies.length">
+                <select x-model.number="colonyId" @change="selectColony(colonyId)">
+                    <template x-for="c in colonies" :key="c.id">
+                        <option :value="c.id" x-text="c.name + ' (#' + c.id + ') · ' + c.buildingCount + ' buildings'"></option>
+                    </template>
+                </select>
+            </div>
+            <span class="status" :class="connection">
+                <span class="dot"></span>
+                <span x-text="connection === 'live' ? 'live' : (connection === 'down' ? 'reconnecting…' : 'connecting…')"></span>
+            </span>
+        </div>
+    </header>
+
+    <main>
+        <!-- Toolbar -->
+        <section class="toolbar">
+            <div class="search">
+                <span class="search-icon">🔍</span>
+                <input type="search" placeholder="Search buildings, items or materials…" x-model="search">
+                <button class="clear" x-show="search" @click="search=''" title="Clear">✕</button>
+            </div>
+            <div class="tools">
+                <label class="toggle">
+                    <input type="checkbox" x-model="onlyInProgress">
+                    <span>In&nbsp;progress only</span>
+                </label>
+                <div class="sortbox">
+                    <label>Sort</label>
+                    <select x-model="sort">
+                        <option value="status">Status (missing first)</option>
+                        <option value="progress">Progress</option>
+                        <option value="name">Name</option>
+                        <option value="level">Level</option>
+                    </select>
+                </div>
+            </div>
+        </section>
+
+        <!-- Builders -->
+        <section class="panel">
+            <h2>Builders <span class="muted" x-text="'(' + snap.builders.length + ')'"></span></h2>
+            <div class="builders-grid" x-show="snap.builders.length">
+                <template x-for="b in snap.builders" :key="b.id">
+                    <div class="builder">
+                        <div class="name" x-text="b.name || 'Builder'"></div>
+                        <div class="task" x-text="builderTask(b).text"></div>
+                        <div class="progress"><span :style="'width:' + builderTask(b).pct + '%'"></span></div>
+                    </div>
+                </template>
+            </div>
+            <div class="empty" x-show="!snap.builders.length">No builders assigned.</div>
+        </section>
+
+        <!-- Buildings -->
+        <section class="panel">
+            <h2>
+                Buildings &amp; Decorations
+                <span class="muted" x-text="'(' + filteredBuildings.length + ')'"></span>
+            </h2>
+            <div class="cards" x-show="filteredBuildings.length">
+                <template x-for="b in filteredBuildings" :key="b.id">
+                    <article class="card" :class="{ 'is-deco': b.kind === 'decoration', 'active': b.beingBuilt }"
+                             @click="openBuilding(b)" tabindex="0" @keydown.enter="openBuilding(b)">
+                        <div class="card-head">
+                            <span class="title" x-text="b.name"></span>
+                            <span class="tag deco" x-show="b.kind === 'decoration'">Decoration</span>
+                        </div>
+                        <div class="sub">
+                            <span x-show="b.kind !== 'decoration'"
+                                  x-text="workOrderTargetLevel(b) ? ('lvl ' + b.level + ' → ' + workOrderTargetLevel(b)) : ('lvl ' + b.level)"></span>
+                            <span class="pos" x-text="b.x + ', ' + b.y + ', ' + b.z"></span>
+                        </div>
+                        <div class="builtby" x-show="b.beingBuilt">
+                            <span class="badge" x-text="builtBy(b) ? ('being built by ' + builtBy(b)) : 'in progress'"></span>
+                        </div>
+                        <div class="progress" x-show="b.beingBuilt">
+                            <span :style="'width:' + buildingProgress(b) + '%'"></span>
+                        </div>
+                        <div class="chips" x-show="(b.required || []).length">
+                            <span class="chip ok" x-show="buildingCounts(b).ok" x-text="buildingCounts(b).ok + ' ok'"></span>
+                            <span class="chip deliver" x-show="buildingCounts(b).deliver" x-text="buildingCounts(b).deliver + ' deliverable'"></span>
+                            <span class="chip missing" x-show="buildingCounts(b).missing" x-text="buildingCounts(b).missing + ' missing'"></span>
+                        </div>
+                        <div class="preview" x-show="(b.required || []).length">
+                            <template x-for="r in b.required.slice(0, 8)" :key="r.itemKey">
+                                <img class="icon" loading="lazy" :src="textureUrl(r.itemKey)" :alt="r.name" :title="r.name">
+                            </template>
+                            <span class="more" x-show="b.required.length > 8" x-text="'+' + (b.required.length - 8)"></span>
+                        </div>
+                        <div class="open-hint">Click to open ▸</div>
+                    </article>
+                </template>
+            </div>
+            <div class="empty" x-show="!filteredBuildings.length">
+                <span x-show="search || onlyInProgress">No buildings match your filters.</span>
+                <span x-show="!search && !onlyInProgress">No buildings. Is a colony founded and MineColonies installed?</span>
+            </div>
+        </section>
+
+        <!-- Warehouse -->
+        <section class="panel">
+            <h2>Warehouse <span class="muted" x-text="'(' + (snap.warehouse.stacks ? snap.warehouse.stacks.length : 0) + ')'"></span></h2>
+            <div class="wh-search" x-show="snap.warehouse.present">
+                <input type="search" placeholder="Search warehouse…" x-model="whSearch">
+            </div>
+            <div class="warehouse-grid" x-show="filteredWarehouse.length">
+                <template x-for="s in filteredWarehouse" :key="s.itemKey">
+                    <div class="wh-item" :title="s.name">
+                        <img class="icon" loading="lazy" :src="textureUrl(s.itemKey)" :alt="s.name">
+                        <div class="wh-text">
+                            <span class="wh-name" x-text="s.name"></span>
+                            <span class="wh-mat" x-show="s.material" x-text="s.material"></span>
+                        </div>
+                        <span class="count" x-text="s.count"></span>
+                    </div>
+                </template>
+            </div>
+            <div class="empty" x-show="!filteredWarehouse.length">No warehouse stock to show.</div>
+        </section>
+    </main>
+
+    <!-- Building detail modal -->
+    <div class="modal-overlay" x-show="modal" @click.self="closeModal()" @keydown.escape.window="closeModal()" x-transition.opacity>
+        <div class="modal" x-show="modal" x-transition>
+            <template x-if="modal">
+                <div>
+                    <div class="modal-head">
+                        <div>
+                            <h3 x-text="modal.name"></h3>
+                            <div class="modal-sub">
+                                <span class="tag deco" x-show="modal.kind === 'decoration'">Decoration</span>
+                                <span x-show="modal.kind !== 'decoration'"
+                                      x-text="workOrderTargetLevel(modal) ? ('Level ' + modal.level + ' → ' + workOrderTargetLevel(modal)) : ('Level ' + modal.level)"></span>
+                                <span class="pos" x-text="modal.x + ', ' + modal.y + ', ' + modal.z"></span>
+                                <span class="badge" x-show="modal.beingBuilt" x-text="builtBy(modal) ? ('built by ' + builtBy(modal)) : 'in progress'"></span>
+                            </div>
+                        </div>
+                        <button class="close" @click="closeModal()">✕</button>
+                    </div>
+
+                    <div class="modal-progress" x-show="modal.beingBuilt">
+                        <div class="progress big"><span :style="'width:' + buildingProgress(modal) + '%'"></span></div>
+                        <span x-text="buildingProgress(modal) + '%'"></span>
+                    </div>
+
+                    <div class="modal-search" x-show="(modal.required || []).length">
+                        <input type="search" placeholder="Search items in this building…" x-model="modalSearch">
+                        <div class="legend">
+                            <span class="chip ok">enough</span>
+                            <span class="chip deliver">deliverable</span>
+                            <span class="chip missing">missing</span>
+                        </div>
+                    </div>
+
+                    <div class="modal-body">
+                        <table class="resources" x-show="modalResources().length">
+                            <thead>
+                            <tr><th>Item</th><th>Need</th><th>Hut</th><th>Warehouse</th><th>Status</th></tr>
+                            </thead>
+                            <tbody>
+                            <template x-for="r in modalResources()" :key="r.itemKey">
+                                <tr :class="'row-' + statusOf(r)">
+                                    <td>
+                                        <span class="itemcell">
+                                            <img class="icon" loading="lazy" :src="textureUrl(r.itemKey)" :alt="r.name">
+                                            <span class="itemtext">
+                                                <span x-text="r.name"></span>
+                                                <span class="mat" x-show="r.material" x-text="'Material: ' + r.material"></span>
+                                            </span>
+                                        </span>
+                                    </td>
+                                    <td x-text="r.needed"></td>
+                                    <td x-text="r.inHut"></td>
+                                    <td x-text="r.inWarehouse"></td>
+                                    <td><span class="pill" :class="statusOf(r)" x-text="statusLabel(r)"></span></td>
+                                </tr>
+                            </template>
+                            </tbody>
+                        </table>
+                        <div class="empty" x-show="!modalResources().length && (modal.required || []).length">No items match your search.</div>
+                        <div class="empty" x-show="!(modal.required || []).length">No pending requirements for this building.</div>
+                    </div>
+                </div>
+            </template>
+        </div>
     </div>
-</header>
 
-<main>
-    <section id="builders" class="panel">
-        <h2>Builders</h2>
-        <div id="buildersBody" class="builders-grid"></div>
-    </section>
-
-    <section id="buildings" class="panel">
-        <h2>Buildings &amp; Requirements</h2>
-        <div id="buildingsBody" class="cards"></div>
-    </section>
-
-    <section id="warehouse" class="panel">
-        <h2>Warehouse</h2>
-        <div id="warehouseBody" class="warehouse-grid"></div>
-    </section>
-</main>
-
-<footer>
-    <span>Server-side MineColonies dashboard. Read-only.</span>
-</footer>
-
-<script src="/app.js"></script>
+    <footer>
+        <span>Server-side MineColonies dashboard · read-only · updates live via SSE</span>
+    </footer>
+</div>
 </body>
 </html>

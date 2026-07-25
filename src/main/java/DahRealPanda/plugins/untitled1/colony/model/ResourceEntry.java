@@ -6,6 +6,7 @@ package DahRealPanda.plugins.untitled1.colony.model;
 public class ResourceEntry {
     public String itemKey;      // texture key: namespace:path (+ optional #hash)
     public String name;         // display name
+    public String material;     // DO material name (e.g. "Beige Bricks"), null when not DO
     public int needed;          // total amount needed
     public int inHut;           // amount currently in the building hut inventory
     public int inWarehouse;     // amount available across colony warehouse(s)

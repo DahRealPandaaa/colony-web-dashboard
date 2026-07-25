@@ -165,16 +165,38 @@ public final class ColonyDataProvider {
             woi.action = workOrderAction(wo, woi.currentLevel, woi.targetLevel);
             woi.progress = progressOf(wo);
 
+            String woName = workOrderName(wo);
+
             BlockPos claimedBy = blockPosOf(firstNonNull(
                     invoke(wo, "getClaimedBy").orElse(null),
                     invoke(wo, "getClaimedByBuilding").orElse(null)));
 
             BuildingInfo targetBuilding = target != null ? buildingByPos.get(target) : null;
+            boolean decoration = false;
+
+            // A work order whose target is not a registered building is a decoration.
+            if (targetBuilding == null && target != null) {
+                targetBuilding = new BuildingInfo();
+                targetBuilding.id = target.hashCode();
+                targetBuilding.kind = "decoration";
+                targetBuilding.type = "decoration";
+                targetBuilding.name = woName != null ? woName : "Decoration";
+                targetBuilding.level = woi.currentLevel;
+                targetBuilding.x = target.getX();
+                targetBuilding.y = target.getY();
+                targetBuilding.z = target.getZ();
+                snap.buildings.add(targetBuilding);
+                buildingByPos.put(target, targetBuilding);
+                decoration = true;
+            }
+
             if (targetBuilding != null) {
                 woi.buildingType = targetBuilding.type;
-                woi.buildingName = targetBuilding.name;
+                woi.buildingName = decoration && woName != null ? woName : targetBuilding.name;
                 targetBuilding.beingBuilt = true;
                 targetBuilding.workOrderId = woi.id;
+            } else if (woName != null) {
+                woi.buildingName = woName;
             }
 
             if (claimedBy != null) {
@@ -365,6 +387,35 @@ public final class ColonyDataProvider {
         return "BUILD";
     }
 
+    /** Best-effort readable name for a work order (used for decorations without a building). */
+    private String workOrderName(Object wo) {
+        // Prefer an explicit display/custom name.
+        Object display = firstNonNull(
+                invoke(wo, "getCustomName").orElse(null),
+                invoke(wo, "getName").orElse(null),
+                invoke(wo, "getDisplayName").orElse(null));
+        String name = display != null ? String.valueOf(display) : null;
+        if (name != null && !name.isBlank() && !name.contains(":")) {
+            return prettyName(name);
+        }
+        // Fall back to the structure path, e.g. ".../decorations/roads/paved" -> "Paved".
+        Object path = firstNonNull(
+                invoke(wo, "getStructureName").orElse(null),
+                invoke(wo, "getStructurePath").orElse(null),
+                invoke(wo, "getTranslationKey").orElse(null));
+        if (path != null) {
+            String s = String.valueOf(path);
+            int slash = Math.max(s.lastIndexOf('/'), s.lastIndexOf('.'));
+            if (slash >= 0 && slash < s.length() - 1) {
+                s = s.substring(slash + 1);
+            }
+            if (!s.isBlank()) {
+                return prettyName(s);
+            }
+        }
+        return name;
+    }
+
     // ------------------------------------------------------------------
     // Resource requirements (builder building) + inventories
     // ------------------------------------------------------------------
@@ -394,6 +445,8 @@ public final class ColonyDataProvider {
                 ResourceEntry e = new ResourceEntry();
                 e.itemKey = DomumOrnamentumResolver.textureKeyFor(stack);
                 e.name = stack.getHoverName().getString();
+                e.material = DomumOrnamentumResolver.isDomum(stack)
+                        ? DomumOrnamentumResolver.materialName(stack).orElse(null) : null;
                 e.needed = amount;
                 e.inHut = available;
                 e.inWarehouse = warehouseCount(snap, e.itemKey);
@@ -432,6 +485,8 @@ public final class ColonyDataProvider {
                 ColonySnapshot.Stack agg = byKey.get(key);
                 if (agg == null) {
                     agg = new ColonySnapshot.Stack(key, stack.getHoverName().getString(), 0);
+                    agg.material = DomumOrnamentumResolver.isDomum(stack)
+                            ? DomumOrnamentumResolver.materialName(stack).orElse(null) : null;
                     byKey.put(key, agg);
                     warehouse.stacks.add(agg);
                 }
