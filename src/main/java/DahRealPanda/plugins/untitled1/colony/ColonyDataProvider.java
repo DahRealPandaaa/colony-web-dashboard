@@ -166,7 +166,7 @@ public final class ColonyDataProvider {
             woi.currentLevel = intOf(invoke(wo, "getCurrentLevel").orElse(null), 0);
             woi.targetLevel = intOf(invoke(wo, "getTargetLevel").orElse(null), 0);
             woi.action = workOrderAction(wo, woi.currentLevel, woi.targetLevel);
-            woi.progress = progressOf(wo);
+            woi.progress = 0.0;
 
             String woName = workOrderName(wo);
 
@@ -210,15 +210,18 @@ public final class ColonyDataProvider {
 
                 // Required resources are read from the builder's building (resource scroll parity).
                 Object builderBuilding = rawBuildingByPos.get(claimedBy);
-                if (builderBuilding != null && targetBuilding != null) {
-                    targetBuilding.required.addAll(neededResources(level, builderBuilding, snap));
+                if (builderBuilding != null) {
+                    woi.progress = computeProgress(wo, builderBuilding);
+                    if (targetBuilding != null) {
+                        targetBuilding.required.addAll(neededResources(level, builderBuilding, snap));
+                    }
                 }
             }
 
             snap.workOrders.add(woi);
         }
 
-        LOGGER.info("[ColonyWeb] colony {} ('{}'): buildings={} workOrders={} warehouse={} ({} stacks)",
+        LOGGER.debug("[ColonyWeb] colony {} ('{}'): buildings={} workOrders={} warehouse={} ({} stacks)",
                 snap.id, snap.name, snap.buildings.size(), snap.workOrders.size(),
                 snap.warehouse.present, snap.warehouse.stacks.size());
 
@@ -363,17 +366,26 @@ public final class ColonyDataProvider {
         return "Builder";
     }
 
-    private double progressOf(Object wo) {
-        // Not all versions expose progress; default to 0 when unknown.
-        Object done = invoke(wo, "getProgress").orElse(null);
-        if (done instanceof Number n) {
-            double d = n.doubleValue();
-            if (d > 1.0) {
-                d = d / 100.0;
-            }
-            return Math.max(0.0, Math.min(1.0, d));
+    /**
+     * Build progress in [0,1], matching MineColonies' own calculation:
+     * {@code 1 - (remaining needed resources / total build resources)}.
+     */
+    @SuppressWarnings("unchecked")
+    private double computeProgress(Object wo, Object builderBuilding) {
+        int total = intOf(invoke(wo, "getAmountOfResources").orElse(null), 0);
+        if (total <= 0 || builderBuilding == null) {
+            return 0.0;
         }
-        return 0.0;
+        Object needed = invoke(builderBuilding, "getNeededResources").orElse(null);
+        if (!(needed instanceof Map<?, ?> map)) {
+            return 0.0;
+        }
+        int remaining = 0;
+        for (Object res : ((Map<Object, Object>) map).values()) {
+            remaining += intOf(invoke(res, "getAmount").orElse(null), 0);
+        }
+        double progress = 1.0 - ((double) remaining / (double) total);
+        return Math.max(0.0, Math.min(1.0, progress));
     }
 
     private String workOrderAction(Object wo, int current, int target) {
