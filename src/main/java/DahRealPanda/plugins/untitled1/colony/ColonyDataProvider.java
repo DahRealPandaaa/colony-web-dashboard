@@ -22,6 +22,7 @@ import org.slf4j.Logger;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -126,6 +127,9 @@ public final class ColonyDataProvider {
         // Map builder hut position -> BuilderInfo, and index buildings by position.
         Map<BlockPos, BuildingInfo> buildingByPos = new HashMap<>();
         Map<BlockPos, Object> rawBuildingByPos = new HashMap<>();
+        // Rack positions already counted, so a rack shared by multiple warehouses (or listed
+        // more than once) is only tallied a single time across the whole colony.
+        Set<BlockPos> countedContainers = new HashSet<>();
 
         for (Object building : buildings) {
             BlockPos pos = buildingPosition(building);
@@ -147,7 +151,7 @@ public final class ColonyDataProvider {
 
             if (isWarehouse(info.type)) {
                 snap.warehouse.present = true;
-                aggregateWarehouse(level, building, pos, snap.warehouse);
+                aggregateWarehouse(level, building, pos, snap.warehouse, countedContainers);
             }
         }
 
@@ -494,12 +498,13 @@ public final class ColonyDataProvider {
         return total;
     }
 
-    private void aggregateWarehouse(ServerLevel level, Object building, BlockPos pos, ColonySnapshot.Warehouse warehouse) {
+    private void aggregateWarehouse(ServerLevel level, Object building, BlockPos pos,
+                                    ColonySnapshot.Warehouse warehouse, Set<BlockPos> countedContainers) {
         Map<String, ColonySnapshot.Stack> byKey = new LinkedHashMap<>();
         for (ColonySnapshot.Stack existing : warehouse.stacks) {
             byKey.put(existing.itemKey, existing);
         }
-        for (IItemHandler handler : inventoriesFor(level, building, pos)) {
+        for (IItemHandler handler : inventoriesFor(level, building, pos, countedContainers)) {
             for (int i = 0; i < handler.getSlots(); i++) {
                 ItemStack stack = handler.getStackInSlot(i);
                 if (stack == null || stack.isEmpty()) {
@@ -523,7 +528,8 @@ public final class ColonyDataProvider {
      * Collect item handlers backing a building. Warehouses have multiple racks, so we scan
      * the building's registered container positions when available, else the hut block entity.
      */
-    private List<IItemHandler> inventoriesFor(ServerLevel level, Object building, BlockPos hutPos) {
+    private List<IItemHandler> inventoriesFor(ServerLevel level, Object building, BlockPos hutPos,
+                                              Set<BlockPos> countedContainers) {
         List<IItemHandler> handlers = new ArrayList<>();
         if (level == null) {
             return handlers;
@@ -546,6 +552,10 @@ public final class ColonyDataProvider {
             positions.add(hutPos.immutable());
         }
         for (BlockPos p : positions) {
+            // Skip a rack already counted by another warehouse (shared/overlapping containers).
+            if (!countedContainers.add(p)) {
+                continue;
+            }
             BlockEntity be = level.getBlockEntity(p);
             if (be == null) {
                 continue;
