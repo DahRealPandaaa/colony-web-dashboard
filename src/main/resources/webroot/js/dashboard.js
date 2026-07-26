@@ -3,6 +3,7 @@ import * as fmt from "./format.js";
 import { authState } from "./auth.js";
 import { iconsState } from "./icons.js";
 import { overviewState } from "./overview.js";
+import { mapState } from "./map.js";
 import { buildingsState } from "./buildings.js";
 import { citizensState } from "./citizens.js";
 import { researchState } from "./research.js";
@@ -39,6 +40,11 @@ const TABS = [
             + '<rect x="14" y="12" width="7" height="9" rx="1.5"/><rect x="3" y="16" width="7" height="5" rx="1.5"/>',
     },
     {
+        id: "map", label: "Map", title: "Colony map",
+        subtitle: "Where everything stands, and who is where",
+        icon: '<path d="M9 3.5 3.5 6v14.5L9 18l6 2.5 5.5-2.5V3.5L15 6z"/><path d="M9 3.5V18"/><path d="M15 6v14.5"/>',
+    },
+    {
         id: "buildings", label: "Buildings", title: "Buildings & decorations",
         subtitle: "What is built and what each site still needs",
         icon: '<path d="M3 21h18"/><path d="M5 21V8l7-5 7 5v13"/><path d="M9 21v-6h6v6"/>',
@@ -68,6 +74,8 @@ const TABS = [
 
 /** Which lazily-loaded section each tab needs. */
 const TAB_SECTIONS = {
+    // The map plots the citizen roster, so it needs that section as well as its own.
+    map: ["map", "citizens"],
     citizens: ["citizens"],
     research: ["research"],
     combat: ["combat"],
@@ -94,7 +102,7 @@ function coreState() {
         citizens: [],
         research: null,
         combat: null,
-        loaded: { citizens: false, research: false, combat: false },
+        loaded: { citizens: false, research: false, combat: false, map: false },
 
         connection: "connecting",
         events: null,
@@ -179,6 +187,7 @@ function coreState() {
         async startDashboard() {
             await this.loadColonies();
             this.connectEvents();
+            this.startMapPolling();
         },
 
         async loadColonies() {
@@ -204,7 +213,8 @@ function coreState() {
             this.citizens = [];
             this.research = null;
             this.combat = null;
-            this.loaded = { citizens: false, research: false, combat: false };
+            this.resetMap();
+            this.loaded = { citizens: false, research: false, combat: false, map: false };
             this.writeHash();
             await this.refresh();
         },
@@ -246,6 +256,7 @@ function coreState() {
                 if (section === "citizens") this.citizens = data;
                 if (section === "research") this.research = data;
                 if (section === "combat") this.combat = data;
+                if (section === "map") this.applyMap(data);
                 this.loaded[section] = true;
             });
         },
@@ -290,6 +301,7 @@ export function dashboard() {
         authState(),
         iconsState(),
         overviewState(),
+        mapState(),
         buildingsState(),
         citizensState(),
         researchState(),

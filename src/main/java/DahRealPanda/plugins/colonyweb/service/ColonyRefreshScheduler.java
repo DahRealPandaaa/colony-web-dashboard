@@ -8,6 +8,7 @@ import DahRealPanda.plugins.colonyweb.colony.ColonyDataProvider;
 import DahRealPanda.plugins.colonyweb.colony.ColonyScan;
 import DahRealPanda.plugins.colonyweb.colony.model.ColonySnapshot;
 import DahRealPanda.plugins.colonyweb.colony.model.ColonySummary;
+import DahRealPanda.plugins.colonyweb.map.ColonyMapService;
 import DahRealPanda.plugins.colonyweb.web.JsonUtil;
 import DahRealPanda.plugins.colonyweb.web.SseBroadcaster;
 import com.mojang.logging.LogUtils;
@@ -24,6 +25,9 @@ import java.util.concurrent.TimeUnit;
 /**
  * Periodically re-scans every colony on the server thread, publishes the results to the cache,
  * and pushes an SSE event for each colony that actually changed.
+ *
+ * <p>The colony map rides along on the same pass, for the same reason: both need the world, and
+ * the world may only be read from the server thread.</p>
  */
 public final class ColonyRefreshScheduler {
     private static final Logger LOGGER = LogUtils.getLogger();
@@ -37,6 +41,7 @@ public final class ColonyRefreshScheduler {
     private final MinecraftServer server;
     private final ColonyDataProvider provider;
     private final ColonyCache cache;
+    private final ColonyMapService maps;
     private final SseBroadcaster broadcaster;
     private final AuthService auth;
 
@@ -47,10 +52,11 @@ public final class ColonyRefreshScheduler {
     private ScheduledExecutorService scheduler;
 
     public ColonyRefreshScheduler(MinecraftServer server, ColonyDataProvider provider, ColonyCache cache,
-                                  SseBroadcaster broadcaster, AuthService auth) {
+                                  ColonyMapService maps, SseBroadcaster broadcaster, AuthService auth) {
         this.server = server;
         this.provider = provider;
         this.cache = cache;
+        this.maps = maps;
         this.broadcaster = broadcaster;
         this.auth = auth;
     }
@@ -95,6 +101,9 @@ public final class ColonyRefreshScheduler {
                 provider.scan(summary.id, needsResearch)
                         .ifPresent(scan -> publish(summary.id, scan));
             }
+
+            // Drawing the map reads loaded chunks, so it rides the same server-thread pass.
+            maps.tick();
 
             if (++ticks % housekeepingEveryNScans() == 0) {
                 broadcaster.heartbeat();
