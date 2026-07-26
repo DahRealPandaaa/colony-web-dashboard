@@ -83,11 +83,15 @@ minecraft {
         }
 
         client {
+            // Keep the integrated-client world separate from the dedicated server so both
+            // development sessions can run at the same time.
+            workingDirectory project.file('run-client')
             // Comma-separated list of namespaces to load gametests from. Empty = all namespaces.
             property 'forge.enabledGameTestNamespaces', mod_id
         }
 
         server {
+            workingDirectory project.file('run-server')
             property 'forge.enabledGameTestNamespaces', mod_id
             args '--nogui'
         }
@@ -96,6 +100,7 @@ minecraft {
         // By default, the server will crash when no gametests are provided.
         // The gametest system is also enabled by default for other run configs under the /test command.
         gameTestServer {
+            workingDirectory project.file('run-gametest')
             property 'forge.enabledGameTestNamespaces', mod_id
         }
 
@@ -119,7 +124,7 @@ repositories {
     // LDTTeam maven hosts MineColonies and Domum Ornamentum artifacts.
     maven {
         name = 'LDTTeam - Modding'
-        url = 'https://ldtteam.jfrog.io/ldtteam/modding/'
+        url = 'https://ldtteam.jfrog.io/artifactory/modding/'
     }
 
     // If you have mod jar dependencies in ./libs, you can declare them as a repository like so.
@@ -137,17 +142,17 @@ dependencies {
     // then special handling is done to allow a setup of a vanilla dependency without the use of an external repository.
     minecraft "net.minecraftforge:forge:${minecraft_version}-${forge_version}"
 
-    // MineColonies + Domum Ornamentum.
-    // This mod integrates with them purely through reflection at runtime, so a hard
-    // compile-time dependency is NOT required and the mod builds standalone.
+    // Load MineColonies and its mandatory support mods in runClient/runServer. ColonyWeb still
+    // integrates through reflection, so these stay off the compile classpath and are not bundled
+    // in the published ColonyWeb jar.
+    runtimeOnly fg.deobf("com.ldtteam:minecolonies:${minecraft_version}-${minecolonies_version}")
+    runtimeOnly fg.deobf("com.ldtteam:structurize:${structurize_version}")
+    runtimeOnly fg.deobf("com.ldtteam:blockui:${blockui_version}")
+    runtimeOnly fg.deobf("com.ldtteam:multipiston:${multipiston_version}")
+    // Domum Ornamentum publishes its runnable 1.20.1 jar with the universal classifier.
+    runtimeOnly fg.deobf("com.ldtteam:domum_ornamentum:${minecraft_version}-${domum_version}:universal")
     //
-    // If you want compile-time API access (and your versions below are valid on the
-    // LDTTeam maven), uncomment these lines. Otherwise the reflection layer handles it.
-    // Note: Domum Ornamentum publishes with a "universal" classifier for 1.20.1.
-    // compileOnly fg.deobf("com.minecolonies:minecolonies:${minecraft_version}-${minecolonies_version}")
-    // compileOnly fg.deobf("com.ldtteam:domumornamentum:${minecraft_version}-${domum_version}:universal")
-    //
-    // For local testing you can also drop the mod jars into ./run/mods so they load at runtime.
+    // Additional optional mods can still be dropped into the selected run directory's mods folder.
 
     // Example mod dependency with JEI - using fg.deobf() ensures the dependency is remapped to your development mappings
     // The JEI API is declared for compile time use, while the full JEI artifact is used at runtime

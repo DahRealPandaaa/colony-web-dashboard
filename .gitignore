@@ -5,6 +5,9 @@ build/
 
 # Forge / Minecraft dev run directories
 run/
+run-client/
+run-server/
+run-gametest/
 run-data/
 runs/
 
@@ -29,7 +32,8 @@ logs/
 .settings/
 .classpath
 .project
-.vscode/
+.vscode/*
+!.vscode/tasks.json
 
 # OS files
 .DS_Store

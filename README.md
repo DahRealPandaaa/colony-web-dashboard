@@ -650,10 +650,33 @@ colonyweb/
 
 Requirements: **JDK 17** (Forge 1.20.1 requires it to run the game).
 
+### Local development in VS Code
+
+Open **Terminal → Run Task** and choose one of these committed tasks:
+
+- **Minecraft: Run Client (Singleplayer)** — starts Minecraft; create/open a singleplayer world
+  to run the mod's server side without a separate dedicated server.
+- **Minecraft: Run Dedicated Server** — starts a local headless server.
+- **Minecraft: Run Client + Server** — starts both in separate terminals so the client can join
+  `localhost`.
+
+The client and server use separate `run-client/` and `run-server/` directories, so they can run
+at the same time without sharing worlds or configuration. Press **Ctrl+Shift+B** for the default
+singleplayer client task. Stop a session with the trash-can button in its terminal.
+
+MineColonies, Structurize, BlockUI, Multi-Piston, and Domum Ornamentum are downloaded into the
+development runtime automatically by Gradle; no manual jar copying is needed. Additional optional
+mods can be placed in `run-client/mods/`, `run-server/mods/`, or both. The dedicated server's first
+start creates `run-server/eula.txt` and exits; read it, set `eula=true` if you accept the Minecraft
+EULA, then run the server task again.
+
+The same sessions are available without VS Code:
+
 ```powershell
 # from the project root
-./gradlew build           # compiles the mod → build/libs/colonyweb-1.0.0-BETA.jar
-./gradlew runServer       # dev server (drop MineColonies + Domum Ornamentum jars in run/mods)
+./gradlew build       # compiles the mod → build/libs/colonyweb-1.0.0-BETA.jar
+./gradlew runClient   # Minecraft client + integrated singleplayer server
+./gradlew runServer   # dedicated server
 ```
 
 Then open `http://localhost:8723/` (or the configured port), and run `/colonyweb sync` in-game
