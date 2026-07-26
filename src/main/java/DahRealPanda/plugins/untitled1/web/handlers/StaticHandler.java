@@ -8,6 +8,9 @@ import org.slf4j.Logger;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
+import java.util.HexFormat;
 
 /**
  * Serves static front-end assets from the {@code webroot/} classpath resources.
@@ -39,6 +42,14 @@ public final class StaticHandler implements HttpHandler {
                 JsonUtil.sendText(exchange, 404, "Not Found");
                 return;
             }
+            String etag = etag(bytes);
+            exchange.getResponseHeaders().set("Cache-Control", cacheControl(path));
+            exchange.getResponseHeaders().set("ETag", etag);
+            if (etag.equals(exchange.getRequestHeaders().getFirst("If-None-Match"))) {
+                exchange.sendResponseHeaders(304, -1);
+                exchange.close();
+                return;
+            }
             JsonUtil.sendBytes(exchange, 200, contentType(path), bytes);
         } catch (Exception e) {
             LOGGER.debug("[ColonyWeb] static handler error", e);
@@ -65,5 +76,24 @@ public final class StaticHandler implements HttpHandler {
         if (path.endsWith(".svg")) return "image/svg+xml";
         if (path.endsWith(".json")) return "application/json; charset=utf-8";
         return "application/octet-stream";
+    }
+
+    private static String cacheControl(String path) {
+        if (path.endsWith(".html")) {
+            return "no-cache";
+        }
+        if (path.endsWith(".js") || path.endsWith(".css")) {
+            return "public, max-age=86400, stale-while-revalidate=604800";
+        }
+        return "public, max-age=604800, stale-while-revalidate=86400";
+    }
+
+    private static String etag(byte[] bytes) {
+        try {
+            byte[] digest = MessageDigest.getInstance("SHA-256").digest(bytes);
+            return "\"" + HexFormat.of().formatHex(digest) + "\"";
+        } catch (NoSuchAlgorithmException e) {
+            throw new IllegalStateException("SHA-256 is unavailable", e);
+        }
     }
 }

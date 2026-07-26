@@ -10,6 +10,9 @@ import org.slf4j.Logger;
 import java.io.IOException;
 import java.net.URLDecoder;
 import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
+import java.util.HexFormat;
 
 /**
  * Serves PNG icons on {@code /textures/{key}.png}. The key is URL-encoded (the {@code #} in
@@ -40,7 +43,14 @@ public final class TextureHandler implements HttpHandler {
             String encodedKey = path.substring(prefix.length(), path.length() - ".png".length());
             String key = URLDecoder.decode(encodedKey, StandardCharsets.UTF_8);
             byte[] png = textureService.getPng(key);
-            exchange.getResponseHeaders().set("Cache-Control", "public, max-age=86400");
+            String etag = etag(png);
+            exchange.getResponseHeaders().set("Cache-Control", "public, max-age=604800, stale-while-revalidate=86400");
+            exchange.getResponseHeaders().set("ETag", etag);
+            if (etag.equals(exchange.getRequestHeaders().getFirst("If-None-Match"))) {
+                exchange.sendResponseHeaders(304, -1);
+                exchange.close();
+                return;
+            }
             JsonUtil.sendBytes(exchange, 200, "image/png", png);
         } catch (Exception e) {
             LOGGER.debug("[ColonyWeb] texture handler error", e);
@@ -49,6 +59,15 @@ public final class TextureHandler implements HttpHandler {
             } catch (IOException ignored) {
                 // no-op
             }
+        }
+    }
+
+    private static String etag(byte[] bytes) {
+        try {
+            byte[] digest = MessageDigest.getInstance("SHA-256").digest(bytes);
+            return "\"" + HexFormat.of().formatHex(digest) + "\"";
+        } catch (NoSuchAlgorithmException e) {
+            throw new IllegalStateException("SHA-256 is unavailable", e);
         }
     }
 }
