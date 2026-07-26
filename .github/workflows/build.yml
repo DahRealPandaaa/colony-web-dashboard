@@ -134,7 +134,7 @@ jobs:
           git add gradle.properties
           git commit -m "chore: release v${VERSION} [skip ci]"
           if ! git pull --rebase origin main; then
-            echo "::error::Unable to rebase release commit onto latest main. Resolve conflicting version bumps and rerun."
+            echo "::error::Unable to rebase release commit onto latest main. Resolve conflicts and rerun."
             git rebase --abort || true
             exit 1
           fi
