@@ -14,6 +14,20 @@ export function num(value) {
     return (value || 0).toLocaleString();
 }
 
+/** Item count as full stacks, remainder, and the exact item count. */
+export function stacks(value, maxStackSize) {
+    const count = Math.max(0, Math.trunc(Number(value) || 0));
+    const size = Math.max(1, Math.trunc(Number(maxStackSize) || 64));
+    const fullStacks = Math.floor(count / size);
+    const remainder = count % size;
+
+    if (fullStacks === 0) return `${num(remainder)} (${num(count)})`;
+
+    const label = fullStacks === 1 ? "stack" : "stacks";
+    const afterStacks = remainder ? ` + ${num(remainder)}` : "";
+    return `${num(fullStacks)} ${label}${afterStacks} (${num(count)})`;
+}
+
 /** Work-order action badge colour. */
 export function badgeClass(action) {
     switch ((action || "").toUpperCase()) {
