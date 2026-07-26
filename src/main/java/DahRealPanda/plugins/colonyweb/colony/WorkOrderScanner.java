@@ -182,6 +182,7 @@ public final class WorkOrderScanner {
                 }
                 ResourceEntry entry = Scan.fillItem(new ResourceEntry(), stack);
                 entry.needed = amount;
+                entry.maxStackSize = Math.max(1, stack.getMaxStackSize());
                 entry.inHut = intOf(invoke(raw, "getAvailable").orElse(null), 0);
                 entry.inWarehouse = WarehouseScanner.countIn(snapshot, entry.itemKey);
                 int shortfall = Math.max(0, amount - entry.inHut);
