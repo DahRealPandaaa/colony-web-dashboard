@@ -63,9 +63,16 @@
 
             <!-- Signed-in player, pinned to the bottom. -->
             <div class="mt-auto pt-3 border-t border-line" x-show="profile">
-                <div class="flex items-center gap-2.5 px-1">
+                <div class="flex items-center gap-2.5 px-1" x-data="{ avatarFailed: false }">
+                    <img class="w-8 h-8 shrink-0 rounded-lg border border-line"
+                         style="image-rendering: pixelated"
+                         x-show="profile?.uuid && !avatarFailed"
+                         :src="profile?.uuid ? `https://mc-heads.net/avatar/${encodeURIComponent(profile.uuid)}/32.png` : null"
+                         :alt="profile?.name ? `${profile.name}'s Minecraft head` : 'Minecraft player head'"
+                         @load="avatarFailed = false" @error="avatarFailed = true">
                     <span class="w-8 h-8 shrink-0 grid place-items-center rounded-lg bg-white/[0.06] border border-line
                                  text-[12px] font-bold uppercase text-accent-soft"
+                          x-show="!profile?.uuid || avatarFailed"
                           x-text="(profile?.name || '?').slice(0, 2)"></span>
                     <span class="flex-1 min-w-0">
                         <span class="block text-[12.5px] font-semibold truncate" x-text="profile?.name"></span>

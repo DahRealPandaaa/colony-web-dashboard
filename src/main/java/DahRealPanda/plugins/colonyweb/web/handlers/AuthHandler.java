@@ -97,6 +97,7 @@ public final class AuthHandler implements HttpHandler {
         state.put("authenticated", !auth.enabled() || user != null);
         if (user != null) {
             Map<String, Object> profile = new LinkedHashMap<>();
+            profile.put("uuid", user.uuid);
             profile.put("name", user.name);
             profile.put("admin", user.admin);
             profile.put("colonyCount", user.accessibleColonies().size());
