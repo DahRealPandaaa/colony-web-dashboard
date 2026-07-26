@@ -102,6 +102,7 @@ function coreState() {
         // Presentation helpers, exposed to the templates.
         pct: fmt.pct,
         num: fmt.num,
+        stacks: fmt.stacks,
         badgeClass: fmt.badgeClass,
         statusOf: fmt.statusOf,
         statusLabel: fmt.statusLabel,
