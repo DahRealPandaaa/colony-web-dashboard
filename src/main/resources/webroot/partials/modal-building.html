@@ -5,16 +5,17 @@
             <div>
                 <div class="modal-head">
                     <div class="flex items-center gap-3.5 min-w-0">
-                        <img class="w-12 h-12 pixelated rounded-lg bg-black/25 border border-line p-1 shrink-0"
-                             loading="lazy" :src="buildingIcon(building)" :alt="building.name">
+                        <img class="w-16 h-16 object-contain pixelated rounded-lg bg-black/25 border border-line p-1 shrink-0"
+                             loading="lazy" :src="buildingArt(building) || buildingIcon(building)" :alt="building.name"
+                             @error="buildingIconFallback($el, building)">
                         <div class="min-w-0">
-                            <h3 class="text-[18px] font-bold tracking-tight flex items-center gap-2.5 flex-wrap">
+                            <h3 class="text-[21px] font-bold tracking-tight flex items-center gap-2.5 flex-wrap">
                                 <span x-text="building.name"></span>
                                 <span class="ba" :class="badgeClass(actionOf(building))"
                                       x-show="actionOf(building)" x-text="actionOf(building)"></span>
                                 <span class="ba b-repair" x-show="building.kind === 'decoration'">Decoration</span>
                             </h3>
-                            <div class="flex gap-3 text-slate-500 text-[12.5px] mt-1 flex-wrap">
+                            <div class="flex gap-3 text-slate-400 text-[13.5px] mt-1 flex-wrap">
                                 <span x-show="workOrderTargetLevel(building)" class="tabular-nums"
                                       x-text="'Level ' + building.level + ' → ' + workOrderTargetLevel(building)"></span>
                                 <span x-show="!workOrderTargetLevel(building)" x-text="'Level ' + building.level"></span>
@@ -30,12 +31,12 @@
 
                 <div class="modal-body">
                     <div class="card flex items-center gap-3.5 mb-4" x-show="building.beingBuilt">
-                        <img class="w-11 h-11 pixelated rounded-lg bg-black/25 border border-line p-1 shrink-0"
+                        <img class="w-14 h-14 pixelated rounded-lg bg-black/25 border border-line p-1 shrink-0"
                              :src="textureUrl('minecolonies:blockhutbuilder')" alt="">
                         <div class="flex-1">
                             <div class="progress big !mt-0"><span :style="'width:' + buildingProgress(building) + '%'"></span></div>
                             <div class="flex justify-between text-[12.5px] mt-2">
-                                <span class="text-slate-500" x-show="builtBy(building)">
+                                <span class="text-slate-400" x-show="builtBy(building)">
                                     Being built by <b class="text-accent-soft" x-text="builtBy(building)"></b>
                                 </span>
                                 <b class="text-accent-soft tabular-nums" x-text="buildingProgress(building) + '%'"></b>
@@ -62,7 +63,15 @@
                             <div class="mc-tip flex items-center gap-3">
                                 <img class="mc-icon" loading="lazy" :src="textureUrl(r.itemKey)" :alt="r.name">
                                 <div class="flex-1 min-w-0">
-                                    <div class="mc-name" x-text="r.name"></div>
+                                    <div class="mc-head">
+                                        <div class="mc-name" x-text="r.name"></div>
+                                        <span class="craft-mark" x-show="r.craftable" title="A colony worker can craft this">
+                                            <svg viewBox="0 0 24 24" width="10" height="10" fill="none" stroke="currentColor"
+                                                 stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                                                <path d="M14 3l7 7-4 4-7-7z"/><path d="M11 7L3 15v6h6l8-8"/>
+                                            </svg>
+                                        </span>
+                                    </div>
                                     <div class="mc-line" x-show="r.craftedIn">Crafted in the <span class="mc-val" x-text="r.craftedIn"></span></div>
                                     <template x-for="(c, cx) in (r.components || [])" :key="cx">
                                         <div class="mc-line"><span x-text="c.label"></span>: <span class="mc-val" x-text="c.material"></span></div>

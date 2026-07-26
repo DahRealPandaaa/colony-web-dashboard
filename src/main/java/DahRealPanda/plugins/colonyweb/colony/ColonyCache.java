@@ -4,6 +4,7 @@ import DahRealPanda.plugins.colonyweb.colony.model.CitizenInfo;
 import DahRealPanda.plugins.colonyweb.colony.model.ColonySnapshot;
 import DahRealPanda.plugins.colonyweb.colony.model.ColonySummary;
 import DahRealPanda.plugins.colonyweb.colony.model.CombatInfo;
+import DahRealPanda.plugins.colonyweb.colony.model.EquipmentInfo;
 import DahRealPanda.plugins.colonyweb.colony.model.ItemCount;
 import DahRealPanda.plugins.colonyweb.colony.model.ResearchInfo;
 
@@ -25,6 +26,8 @@ public final class ColonyCache {
     private final Map<Integer, ResearchInfo> research = new ConcurrentHashMap<>();
     /** colony id -> citizen id -> that citizen's carried items. */
     private final Map<Integer, Map<Integer, List<ItemCount>>> inventories = new ConcurrentHashMap<>();
+    /** colony id -> citizen id -> what that citizen is wearing and holding. */
+    private final Map<Integer, Map<Integer, List<EquipmentInfo>>> equipment = new ConcurrentHashMap<>();
 
     public List<ColonySummary> summaries() {
         return summaries;
@@ -84,9 +87,23 @@ public final class ColonyCache {
         inventories.put(colonyId, byCitizen);
     }
 
+    public List<EquipmentInfo> equipment(int colonyId, int citizenId) {
+        Map<Integer, List<EquipmentInfo>> byCitizen = equipment.get(colonyId);
+        if (byCitizen == null) {
+            return List.of();
+        }
+        List<EquipmentInfo> items = byCitizen.get(citizenId);
+        return items != null ? items : List.of();
+    }
+
+    public void putEquipment(int colonyId, Map<Integer, List<EquipmentInfo>> byCitizen) {
+        equipment.put(colonyId, byCitizen);
+    }
+
     /** Drop everything cached for colonies that no longer exist. */
     public void retainOnly(List<ColonySummary> current) {
-        List<Map<Integer, ?>> caches = List.of(snapshots, citizens, combat, research, inventories);
+        List<Map<Integer, ?>> caches =
+                List.of(snapshots, citizens, combat, research, inventories, equipment);
         for (Map<Integer, ?> cache : caches) {
             cache.keySet().removeIf(id -> current.stream().noneMatch(s -> s.id == id));
         }

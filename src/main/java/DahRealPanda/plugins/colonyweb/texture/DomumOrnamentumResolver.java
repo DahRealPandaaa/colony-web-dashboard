@@ -2,7 +2,6 @@ package DahRealPanda.plugins.colonyweb.texture;
 
 import DahRealPanda.plugins.colonyweb.colony.MineColoniesReflect;
 import DahRealPanda.plugins.colonyweb.colony.model.MaterialComponent;
-import DahRealPanda.plugins.colonyweb.util.Text;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.Tag;
 import net.minecraft.resources.ResourceLocation;
@@ -118,30 +117,36 @@ public final class DomumOrnamentumResolver {
         return names.isEmpty() ? Optional.empty() : Optional.of(String.join(" + ", names));
     }
 
+    /** Role labels for a block's material slots, in the block's own component order. */
+    private static final String[] MATERIAL_LABELS = {
+            "Main Material", "Secondary Material", "Tertiary Material", "Quaternary Material"};
+
     /**
      * The material components of a DO stack as tooltip-ready lines, in the block's own
      * component order (e.g. {@code Supported by: Oak Planks}, {@code Main Material: Brick Extra}).
+     *
+     * <p>Labels are positional rather than derived from the component id. A component id is not
+     * a role name — framed blocks key their slots by the <em>default</em> block, so a slot filled
+     * with Roan Bricks was being labelled "Dark Oak Planks", which reads as a second material
+     * rather than as the slot it is.</p>
      */
     public static List<MaterialComponent> componentsOf(ItemStack stack) {
         List<MaterialComponent> out = new ArrayList<>();
-        boolean mainAssigned = false;
+        int slot = 0;
         for (Map.Entry<String, String> e : componentMaterials(stack).entrySet()) {
             String name = blockName(e.getValue());
             if (name == null) {
                 continue;
             }
-            String label;
-            if (isSupport(e.getKey())) {
-                label = "Supported by";
-            } else if (!mainAssigned) {
-                label = "Main Material";
-                mainAssigned = true;
-            } else {
-                label = Text.humanize(Text.pathOf(e.getKey()));
-            }
+            String label = isSupport(e.getKey()) ? "Supported by" : materialLabel(slot++);
             out.add(new MaterialComponent(e.getKey(), label, name, e.getValue()));
         }
         return out;
+    }
+
+    /** "Main Material", "Secondary Material", … then a plain numbered fallback. */
+    private static String materialLabel(int slot) {
+        return slot < MATERIAL_LABELS.length ? MATERIAL_LABELS[slot] : "Material " + (slot + 1);
     }
 
     /**

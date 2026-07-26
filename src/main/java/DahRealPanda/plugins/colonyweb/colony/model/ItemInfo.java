@@ -13,6 +13,7 @@ public class ItemInfo {
     public String material;  // combined DO material names, null when not DO
     public boolean domum;    // true for Domum Ornamentum textured blocks
     public String craftedIn; // e.g. "Architects Cutter", null when unknown
+    public boolean craftable; // a colony worker knows a recipe that produces this
 
     public List<MaterialComponent> components = new ArrayList<>();
 }

@@ -13,6 +13,7 @@ export function citizensState() {
 
         citizen: null,
         citizenInventory: [],
+        citizenEquipment: [],
 
         get citizenJobs() {
             const jobs = new Set();
@@ -61,17 +62,24 @@ export function citizensState() {
             return citizen.maxHealth ? (citizen.health / citizen.maxHealth) * 100 : 0;
         },
 
+        /** Total vanilla armour value across a set of equipped items. */
+        armorPointsOf(equipment) {
+            return (equipment || []).reduce((sum, item) => sum + (item.armorPoints || 0), 0);
+        },
+
         // ---- detail modal ----
 
         async openCitizen(citizen) {
             this.citizen = citizen;
             this.citizenInventory = [];
+            this.citizenEquipment = [];
             await this.loadCitizenDetail();
         },
 
         closeCitizen() {
             this.citizen = null;
             this.citizenInventory = [];
+            this.citizenEquipment = [];
         },
 
         async loadCitizenDetail() {
@@ -81,6 +89,7 @@ export function citizensState() {
                 // Keep object identity so the modal transition does not replay.
                 Object.assign(this.citizen, data.citizen);
                 this.citizenInventory = data.inventory || [];
+                this.citizenEquipment = data.equipment || [];
             });
         },
     };

@@ -2,6 +2,7 @@ package DahRealPanda.plugins.colonyweb.colony;
 
 import DahRealPanda.plugins.colonyweb.colony.model.BuildingInfo;
 import DahRealPanda.plugins.colonyweb.colony.model.CitizenInfo;
+import DahRealPanda.plugins.colonyweb.colony.model.EquipmentInfo;
 import DahRealPanda.plugins.colonyweb.colony.model.ItemCount;
 import DahRealPanda.plugins.colonyweb.util.Text;
 import com.mojang.logging.LogUtils;
@@ -37,10 +38,11 @@ public final class CitizenScanner {
 
     private static final String SKILL_ENUM = "com.minecolonies.api.entity.citizen.Skill";
 
-    /** Citizens plus their inventories, keyed by citizen id. */
+    /** Citizens plus their inventories and equipment, both keyed by citizen id. */
     public static final class Result {
         public final List<CitizenInfo> citizens = new ArrayList<>();
         public final Map<Integer, List<ItemCount>> inventories = new HashMap<>();
+        public final Map<Integer, List<EquipmentInfo>> equipment = new HashMap<>();
     }
 
     /**
@@ -62,6 +64,7 @@ public final class CitizenScanner {
                 CitizenInfo info = readCitizen(colony, citizen, buildingByPos);
                 result.citizens.add(info);
                 result.inventories.put(info.id, readInventory(citizen, info));
+                result.equipment.put(info.id, EquipmentScanner.read(citizen));
             } catch (Throwable t) {
                 LOGGER.debug("[ColonyWeb] failed to read a citizen", t);
             }

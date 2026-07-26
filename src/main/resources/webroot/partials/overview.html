@@ -63,14 +63,14 @@
                         <div class="card !p-3 flex items-center gap-3">
                             <span class="ba shrink-0" :class="badgeClass(wo.action)" x-text="wo.action"></span>
                             <div class="flex-1 min-w-0">
-                                <div class="font-semibold text-[13.5px] truncate"
+                                <div class="font-semibold text-[14.5px] truncate"
                                      x-text="wo.buildingName || wo.buildingType || 'Structure'"></div>
                                 <div class="progress"><span :style="'width:' + Math.round((wo.progress || 0) * 100) + '%'"></span></div>
                             </div>
                             <div class="text-right shrink-0">
                                 <div class="text-[12px] text-slate-400 tabular-nums" x-text="wo.currentLevel + ' → ' + wo.targetLevel"></div>
                                 <div class="text-[12px] font-semibold"
-                                     :class="wo.builderName ? 'text-accent-soft' : 'text-slate-600'"
+                                     :class="wo.builderName ? 'text-accent-soft' : 'text-slate-400'"
                                      x-text="wo.builderName || 'unclaimed'"></div>
                             </div>
                         </div>
@@ -96,11 +96,11 @@
                             <div>
                                 <div class="flex items-center gap-2">
                                     <span class="ba" :class="badgeClass(builderInfo(b).action)" x-text="builderInfo(b).action"></span>
-                                    <span class="ml-auto text-[11.5px] text-slate-500 truncate" x-text="b.name"></span>
+                                    <span class="ml-auto text-[12.5px] text-slate-400 truncate" x-text="b.name"></span>
                                 </div>
                                 <div class="mt-1.5 flex items-baseline gap-2">
-                                    <span class="font-semibold text-[13.5px] truncate" x-text="builderInfo(b).building"></span>
-                                    <span class="text-slate-500 text-[11.5px] font-semibold tabular-nums shrink-0"
+                                    <span class="font-semibold text-[14.5px] truncate" x-text="builderInfo(b).building"></span>
+                                    <span class="text-slate-400 text-[12.5px] font-semibold tabular-nums shrink-0"
                                           x-text="builderInfo(b).current + ' → ' + builderInfo(b).target"></span>
                                 </div>
                                 <div class="progress"><span :style="'width:' + builderInfo(b).pct + '%'"></span></div>
@@ -110,8 +110,8 @@
                         </template>
                         <template x-if="builderInfo(b).idle">
                             <div>
-                                <div class="font-semibold text-[13.5px]" x-text="b.name"></div>
-                                <div class="text-slate-600 text-[12px] mt-0.5">Idle</div>
+                                <div class="font-semibold text-[14.5px]" x-text="b.name"></div>
+                                <div class="text-slate-400 text-[12px] mt-0.5">Idle</div>
                             </div>
                         </template>
                     </div>

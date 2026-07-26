@@ -25,9 +25,12 @@ public final class BuildingScanner {
     /** Every MineColonies hut block id starts with this. */
     private static final String HUT_PREFIX = "blockhut";
 
-    private final WarehouseScanner warehouseScanner = new WarehouseScanner();
-
     public void scan(Collection<Object> buildings, ScanContext ctx) {
+        // Must be per scan: it remembers which racks it has already counted, so a shared
+        // instance would treat every rack as already tallied from the second scan onward and
+        // hand back an empty warehouse forever.
+        WarehouseScanner warehouseScanner = new WarehouseScanner();
+
         for (Object building : buildings) {
             BlockPos pos = positionOf(building);
             if (pos == null) {

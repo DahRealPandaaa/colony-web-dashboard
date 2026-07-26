@@ -1,5 +1,6 @@
 package DahRealPanda.plugins.colonyweb.colony;
 
+import DahRealPanda.plugins.colonyweb.ColonyWeb;
 import DahRealPanda.plugins.colonyweb.colony.model.ColonySnapshot;
 import DahRealPanda.plugins.colonyweb.texture.DomumOrnamentumResolver;
 import com.mojang.logging.LogUtils;
@@ -19,7 +20,6 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.function.Predicate;
 
 import static DahRealPanda.plugins.colonyweb.colony.MineColoniesReflect.invoke;
 
@@ -32,6 +32,10 @@ import static DahRealPanda.plugins.colonyweb.colony.MineColoniesReflect.invoke;
  * combined view of <em>both</em> halves while both halves also appear in that list. Either
  * path multiplies every count. So instead each rack's own inventory is read directly, and
  * rack positions are de-duplicated across the whole colony.</p>
+ *
+ * <p><strong>One instance per scan.</strong> The de-duplication state below is what makes the
+ * counts correct within a scan and completely wrong across scans — a reused instance considers
+ * every rack already counted and reports an empty warehouse from the second scan onward.</p>
  */
 public final class WarehouseScanner {
     private static final Logger LOGGER = LogUtils.getLogger();
@@ -46,66 +50,18 @@ public final class WarehouseScanner {
     public void addWarehouse(ServerLevel level, Object building, BlockPos hutPos,
                              ColonySnapshot.Warehouse warehouse) {
         int before = warehouse.stacks.size();
-        // Preferred: MineColonies' own enumeration, which lists exactly the racks the game
-        // associates with this warehouse.
-        boolean viaApi = addViaWarehouseApi(level, hutPos, warehouse);
-        if (!viaApi) {
-            for (IItemHandler handler : rackInventories(level, building, hutPos)) {
-                for (int slot = 0; slot < handler.getSlots(); slot++) {
-                    ItemStack stack = handler.getStackInSlot(slot);
-                    if (stack != null && !stack.isEmpty()) {
-                        add(warehouse, stack);
-                    }
+        int racks = 0;
+        for (IItemHandler handler : rackInventories(level, building, hutPos)) {
+            racks++;
+            for (int slot = 0; slot < handler.getSlots(); slot++) {
+                ItemStack stack = handler.getStackInSlot(slot);
+                if (stack != null && !stack.isEmpty()) {
+                    add(warehouse, stack);
                 }
             }
         }
-        LOGGER.debug("[ColonyWeb] warehouse at {} scanned via {} -> {} stacks (+{})",
-                hutPos, viaApi ? "MineColonies API" : "racks",
-                warehouse.stacks.size(), warehouse.stacks.size() - before);
-    }
-
-    /**
-     * Tally via {@code TileEntityWareHouse#getMatchingItemStacksInWarehouse(Predicate)} — the
-     * same call the game uses to list warehouse contents.
-     *
-     * <p>Each returned entry is a {@code Tuple<ItemStack, BlockPos>}; only the stack matters.
-     * De-duplicating by that position is what stops a double rack, whose two halves both appear
-     * in the list, from being counted twice.</p>
-     *
-     * @return true when the method was found and used.
-     */
-    private boolean addViaWarehouseApi(ServerLevel level, BlockPos hutPos,
-                                       ColonySnapshot.Warehouse warehouse) {
-        if (level == null) {
-            return false;
-        }
-        BlockEntity blockEntity = level.getBlockEntity(hutPos);
-        if (blockEntity == null) {
-            return false;
-        }
-        Predicate<ItemStack> everything = stack -> true;
-        Object result = MineColoniesReflect.invoke(blockEntity, "getMatchingItemStacksInWarehouse",
-                new Class<?>[]{Predicate.class}, everything).orElse(null);
-        if (!(result instanceof List<?> entries)) {
-            return false;
-        }
-        Set<BlockPos> seenHere = new HashSet<>();
-        for (Object entry : entries) {
-            BlockPos from = Scan.blockPosOf(invoke(entry, "getB").orElse(null));
-            if (from != null && !countedContainers.add(from.immutable())) {
-                continue;
-            }
-            if (from != null && !seenHere.add(from.immutable())) {
-                continue;
-            }
-            ItemStack stack = Scan.itemStackOf(Scan.firstNonNull(
-                    invoke(entry, "getA").orElse(null),
-                    entry instanceof ItemStack ? entry : null));
-            if (stack != null && !stack.isEmpty()) {
-                add(warehouse, stack);
-            }
-        }
-        return true;
+        LOGGER.info("{} warehouse at {}: {} racks read, {} new stacks ({} total)",
+                ColonyWeb.LOG, hutPos, racks, warehouse.stacks.size() - before, warehouse.stacks.size());
     }
 
     private void add(ColonySnapshot.Warehouse warehouse, ItemStack stack) {

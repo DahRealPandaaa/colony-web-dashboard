@@ -130,6 +130,7 @@ public final class ColonyRefreshScheduler {
         cache.putCitizens(colonyId, scan.citizens);
         cache.putCombat(colonyId, scan.combat);
         cache.putInventories(colonyId, scan.inventories);
+        cache.putEquipment(colonyId, scan.equipment);
 
         int hash = ScanHasher.hash(scan);
         Integer previous = colonyHashes.put(colonyId, hash);

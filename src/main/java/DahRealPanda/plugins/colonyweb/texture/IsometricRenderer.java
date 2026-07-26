@@ -23,10 +23,25 @@ public final class IsometricRenderer {
     private static final double SHADE_NS = 0.8;
     private static final double SHADE_EW = 0.6;
 
-    private static final double COS_X = Math.cos(Math.toRadians(30));
-    private static final double SIN_X = Math.sin(Math.toRadians(30));
-    private static final double COS_Y = Math.cos(Math.toRadians(225));
-    private static final double SIN_Y = Math.sin(Math.toRadians(225));
+    private static final double GUI_PITCH_DEGREES = 30;
+
+    /**
+     * The vanilla GUI yaw, negated.
+     *
+     * <p>Minecraft's item transform is {@code [30, 225, 0]}, but the GUI pass also mirrors the
+     * scene ({@code poseStack.scale(16, -16, 16)}), which flips the handedness the yaw is
+     * applied in. Rotating by a plain +225° here produced a horizontally mirrored block — the
+     * far corner instead of the near one. Checked against the game's own renders: a
+     * {@code facing=north} furnace shows its front on the left, and a crafting table shows its
+     * front texture on both visible sides, which only holds when the visible faces are
+     * <em>up</em>, <em>north</em> (left) and <em>west</em> (right).</p>
+     */
+    private static final double GUI_YAW_DEGREES = -225;
+
+    private static final double COS_X = Math.cos(Math.toRadians(GUI_PITCH_DEGREES));
+    private static final double SIN_X = Math.sin(Math.toRadians(GUI_PITCH_DEGREES));
+    private static final double COS_Y = Math.cos(Math.toRadians(GUI_YAW_DEGREES));
+    private static final double SIN_Y = Math.sin(Math.toRadians(GUI_YAW_DEGREES));
 
     /** Largest half-extent of a rotated 16-unit cube; used to fit the model to the canvas. */
     private static final double MODEL_HALF_EXTENT = 12.6;

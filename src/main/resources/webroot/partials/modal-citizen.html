@@ -5,15 +5,16 @@
             <div>
                 <div class="modal-head">
                     <div class="flex items-center gap-3.5 min-w-0">
-                        <img class="w-12 h-12 pixelated rounded-lg bg-black/25 border border-line p-1 shrink-0"
-                             :src="citizenIcon(citizen)" :alt="citizen.job">
+                        <img class="w-16 h-20 object-cover object-top rounded-lg bg-black/30 border border-line shrink-0"
+                             :src="citizenArt(citizen)" :alt="citizen.job"
+                             @error="citizenIconFallback($el, citizen)">
                         <div class="min-w-0">
-                            <h3 class="text-[18px] font-bold tracking-tight flex items-center gap-2.5 flex-wrap">
+                            <h3 class="text-[21px] font-bold tracking-tight flex items-center gap-2.5 flex-wrap">
                                 <span x-text="citizen.name"></span>
                                 <span class="chip on" x-text="citizen.job"></span>
                                 <span class="ba b-repair" x-show="citizen.child">Child</span>
                             </h3>
-                            <div class="flex gap-3 text-slate-500 text-[12.5px] mt-1 flex-wrap">
+                            <div class="flex gap-3 text-slate-400 text-[13.5px] mt-1 flex-wrap">
                                 <span x-show="citizen.workBuilding" x-text="'Works at ' + citizen.workBuilding"></span>
                                 <span x-show="citizen.homeBuilding" x-text="'Lives at ' + citizen.homeBuilding"></span>
                                 <span class="tabular-nums" x-text="citizen.x + ', ' + citizen.y + ', ' + citizen.z"></span>
@@ -82,6 +83,28 @@
                         </section>
 
                         <section class="min-w-0">
+                            <div class="flex items-center justify-between mb-2.5" x-show="citizenEquipment.length">
+                                <h4 class="panel-title">Equipped</h4>
+                                <span class="chip" x-show="armorPointsOf(citizenEquipment)">
+                                    <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor"
+                                         stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                        <path d="M12 3l7.5 3v5.7c0 4.5-3.2 8.4-7.5 9.8-4.3-1.4-7.5-5.3-7.5-9.8V6z"/>
+                                    </svg>
+                                    <b class="tabular-nums" x-text="armorPointsOf(citizenEquipment)"></b>
+                                </span>
+                            </div>
+                            <div class="flex items-center gap-1.5 flex-wrap mb-5" x-show="citizenEquipment.length">
+                                <template x-for="(e, ei) in citizenEquipment" :key="ei">
+                                    <span class="gear" :class="e.enchanted ? 'ench' : ''"
+                                          :title="e.slot + ': ' + e.name
+                                                  + (e.armorPoints ? ' (+' + e.armorPoints + ' armour)' : '')
+                                                  + (e.durabilityPct < 100 ? ' · ' + e.durabilityPct + '% durability' : '')">
+                                        <img class="pixelated w-full h-full" loading="lazy"
+                                             :src="textureUrl(e.itemKey)" :alt="e.name">
+                                    </span>
+                                </template>
+                            </div>
+
                             <div class="flex items-center justify-between mb-2.5">
                                 <h4 class="panel-title">Inventory</h4>
                                 <span class="chip" x-text="citizen.inventoryUsed + ' / ' + citizen.inventorySize + ' slots'"></span>
@@ -91,7 +114,15 @@
                                     <div class="mc-tip flex items-center gap-3">
                                         <img class="mc-icon" loading="lazy" :src="textureUrl(i.itemKey)" :alt="i.name">
                                         <div class="flex-1 min-w-0">
-                                            <div class="mc-name" x-text="i.name"></div>
+                                            <div class="mc-head">
+                                                <div class="mc-name" x-text="i.name"></div>
+                                                <span class="craft-mark" x-show="i.craftable" title="A colony worker can craft this">
+                                                    <svg viewBox="0 0 24 24" width="10" height="10" fill="none" stroke="currentColor"
+                                                         stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                                                        <path d="M14 3l7 7-4 4-7-7z"/><path d="M11 7L3 15v6h6l8-8"/>
+                                                    </svg>
+                                                </span>
+                                            </div>
                                             <div class="mc-line" x-show="i.craftedIn">Crafted in the <span class="mc-val" x-text="i.craftedIn"></span></div>
                                             <template x-for="(c, cx) in (i.components || [])" :key="cx">
                                                 <div class="mc-line"><span x-text="c.label"></span>: <span class="mc-val" x-text="c.material"></span></div>

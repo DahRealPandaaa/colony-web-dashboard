@@ -3,12 +3,14 @@ package DahRealPanda.plugins.colonyweb.colony;
 import DahRealPanda.plugins.colonyweb.colony.model.BuildingInfo;
 import DahRealPanda.plugins.colonyweb.colony.model.CitizenInfo;
 import DahRealPanda.plugins.colonyweb.colony.model.CombatInfo;
+import DahRealPanda.plugins.colonyweb.colony.model.EquipmentInfo;
 import DahRealPanda.plugins.colonyweb.util.Text;
 import com.mojang.logging.LogUtils;
 import net.minecraft.core.BlockPos;
 import org.slf4j.Logger;
 
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -45,6 +47,7 @@ public final class CombatScanner {
             "guardtower", "barracks", "barrackstower", "archery", "combatacademy");
 
     public CombatInfo scan(Object colony, List<CitizenInfo> citizens,
+                           Map<Integer, List<EquipmentInfo>> equipment,
                            Map<BlockPos, BuildingInfo> buildingByPos,
                            Map<BlockPos, Object> rawBuildingByPos) {
         CombatInfo info = new CombatInfo();
@@ -53,7 +56,7 @@ public final class CombatScanner {
             readGraves(colony, info);
             readEvents(colony, info);
             readPosts(buildingByPos, rawBuildingByPos, info);
-            readGuards(citizens, info);
+            readGuards(citizens, equipment, buildingByPos, info);
         } catch (Throwable t) {
             LOGGER.debug("[ColonyWeb] combat scan failed", t);
         }
@@ -144,7 +147,14 @@ public final class CombatScanner {
         info.posts.sort((a, b) -> Text.stringOrEmpty(a.name).compareToIgnoreCase(Text.stringOrEmpty(b.name)));
     }
 
-    private void readGuards(List<CitizenInfo> citizens, CombatInfo info) {
+    private void readGuards(List<CitizenInfo> citizens,
+                            Map<Integer, List<EquipmentInfo>> equipment,
+                            Map<BlockPos, BuildingInfo> buildingByPos,
+                            CombatInfo info) {
+        // The guard's post is known by id; index the buildings once rather than per guard.
+        Map<Integer, BuildingInfo> buildingById = new HashMap<>();
+        buildingByPos.values().forEach(building -> buildingById.put(building.id, building));
+
         double levelSum = 0;
         double healthSum = 0;
         for (CitizenInfo citizen : citizens) {
@@ -160,10 +170,19 @@ public final class CombatScanner {
             guard.health = citizen.health;
             guard.maxHealth = citizen.maxHealth;
             guard.spawned = citizen.spawned;
-            guard.building = citizen.workBuilding;
             guard.x = citizen.x;
             guard.y = citizen.y;
             guard.z = citizen.z;
+
+            guard.building = citizen.workBuilding;
+            guard.buildingId = citizen.workBuildingId;
+            BuildingInfo post = buildingById.get(citizen.workBuildingId);
+            if (post != null) {
+                guard.building = post.name;
+                guard.buildingLevel = post.level;
+            }
+
+            applyEquipment(guard, equipment.get(citizen.id));
             info.guards.add(guard);
 
             levelSum += guard.level;
@@ -174,7 +193,24 @@ public final class CombatScanner {
             info.averageGuardLevel = levelSum / info.guardCount;
             info.averageHealthPct = healthSum / info.guardCount * 100.0;
         }
-        info.guards.sort((a, b) -> b.level - a.level);
+        // Best equipped first — that is the question the roster is there to answer.
+        info.guards.sort((a, b) -> a.armorPoints != b.armorPoints
+                ? b.armorPoints - a.armorPoints
+                : b.level - a.level);
+    }
+
+    /** Summarise a guard's kit: total protection and their weapon. */
+    private static void applyEquipment(CombatInfo.Guard guard, List<EquipmentInfo> equipment) {
+        if (equipment == null || equipment.isEmpty()) {
+            return;
+        }
+        guard.equipment = equipment;
+        for (EquipmentInfo item : equipment) {
+            guard.armorPoints += item.armorPoints;
+            if ("Main hand".equals(item.slot)) {
+                guard.weapon = item.name;
+            }
+        }
     }
 
     /** The guard's own primary skill level, falling back to their best combat-ish skill. */

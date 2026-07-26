@@ -32,11 +32,12 @@
                     <span class="ba b-repair absolute top-3 right-3" x-show="b.kind === 'decoration'">Deco</span>
 
                     <div class="flex items-center gap-3">
-                        <img class="w-11 h-11 pixelated rounded-lg bg-black/25 border border-line p-1 shrink-0"
-                             loading="lazy" :src="buildingIcon(b)" :alt="b.name">
+                        <img class="w-14 h-14 object-contain pixelated rounded-lg bg-black/25 border border-line p-0.5 shrink-0"
+                             loading="lazy" :src="buildingArt(b) || buildingIcon(b)" :alt="b.name"
+                             @error="buildingIconFallback($el, b)">
                         <div class="flex-1 min-w-0">
-                            <span class="block font-bold text-[14.5px] truncate" x-text="b.name"></span>
-                            <span class="text-slate-500 text-[12.5px]">Level
+                            <span class="block font-bold text-[16px] truncate" x-text="b.name"></span>
+                            <span class="text-slate-400 text-[13.5px]">Level
                                 <b class="text-slate-200 tabular-nums"
                                    x-text="workOrderTargetLevel(b) ? (b.level + ' → ' + workOrderTargetLevel(b)) : b.level"></b>
                             </span>
@@ -46,7 +47,7 @@
                     <template x-if="b.beingBuilt">
                         <div class="mt-3">
                             <div class="flex items-center justify-between text-[12px]">
-                                <span class="text-slate-500 truncate">Built by
+                                <span class="text-slate-400 truncate">Built by
                                     <b class="text-accent-soft" x-text="builtBy(b) || '—'"></b>
                                 </span>
                                 <b class="text-accent-soft tabular-nums" x-text="buildingProgress(b) + '%'"></b>
@@ -59,7 +60,7 @@
                         <span class="sdot ok" x-show="resourceCounts(b).ok"><i></i><b x-text="resourceCounts(b).ok"></b></span>
                         <span class="sdot deliver" x-show="resourceCounts(b).deliver"><i></i><b x-text="resourceCounts(b).deliver"></b></span>
                         <span class="sdot missing" x-show="resourceCounts(b).missing"><i></i><b x-text="resourceCounts(b).missing"></b></span>
-                        <span class="ml-auto text-[11px] text-slate-600" x-text="(b.required || []).length + ' items'"></span>
+                        <span class="ml-auto text-[12px] text-slate-400" x-text="(b.required || []).length + ' items'"></span>
                     </div>
                 </article>
             </template>

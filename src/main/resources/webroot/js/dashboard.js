@@ -1,13 +1,13 @@
 import { Unauthorized, api, textureUrl } from "./api.js";
 import * as fmt from "./format.js";
 import { authState } from "./auth.js";
+import { iconsState } from "./icons.js";
 import { overviewState } from "./overview.js";
 import { buildingsState } from "./buildings.js";
 import { citizensState } from "./citizens.js";
 import { researchState } from "./research.js";
 import { combatState } from "./combat.js";
 import { warehouseState } from "./warehouse.js";
-import { mapState } from "./colonyMap.js";
 
 /** Zeroed stats so the overview renders before the first snapshot arrives. */
 function emptyStats() {
@@ -64,17 +64,11 @@ const TABS = [
         subtitle: "Everything stored across the colony",
         icon: '<path d="M3 8l9-5 9 5v8l-9 5-9-5z"/><path d="M3 8l9 5 9-5"/><path d="M12 13v8"/>',
     },
-    {
-        id: "map", label: "Map", title: "Colony map",
-        subtitle: "Top-down plan, north up",
-        icon: '<path d="M9 4 3 6.5v13L9 17l6 3 6-2.5v-13L15 7z"/><path d="M9 4v13"/><path d="M15 7v13"/>',
-    },
 ];
 
 /** Which lazily-loaded section each tab needs. */
 const TAB_SECTIONS = {
     citizens: ["citizens"],
-    map: ["citizens"],
     research: ["research"],
     combat: ["combat"],
 };
@@ -293,12 +287,12 @@ export function dashboard() {
     return compose(
         coreState(),
         authState(),
+        iconsState(),
         overviewState(),
         buildingsState(),
         citizensState(),
         researchState(),
         combatState(),
         warehouseState(),
-        mapState(),
     );
 }

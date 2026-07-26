@@ -3,6 +3,7 @@ package DahRealPanda.plugins.colonyweb.colony;
 import DahRealPanda.plugins.colonyweb.colony.model.CitizenInfo;
 import DahRealPanda.plugins.colonyweb.colony.model.ColonySnapshot;
 import DahRealPanda.plugins.colonyweb.colony.model.CombatInfo;
+import DahRealPanda.plugins.colonyweb.colony.model.EquipmentInfo;
 import DahRealPanda.plugins.colonyweb.colony.model.ItemCount;
 import DahRealPanda.plugins.colonyweb.colony.model.ResearchInfo;
 
@@ -22,6 +23,9 @@ public final class ColonyScan {
 
     /** Citizen id to the items they are carrying. */
     public Map<Integer, List<ItemCount>> inventories = Map.of();
+
+    /** Citizen id to what they are wearing and holding. */
+    public Map<Integer, List<EquipmentInfo>> equipment = Map.of();
 
     public CombatInfo combat = new CombatInfo();
 

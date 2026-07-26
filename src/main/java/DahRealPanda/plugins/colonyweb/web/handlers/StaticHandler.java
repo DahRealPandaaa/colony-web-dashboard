@@ -73,17 +73,27 @@ public final class StaticHandler implements HttpHandler {
         if (path.endsWith(".js")) return "application/javascript; charset=utf-8";
         if (path.endsWith(".css")) return "text/css; charset=utf-8";
         if (path.endsWith(".png")) return "image/png";
+        if (path.endsWith(".jpg") || path.endsWith(".jpeg")) return "image/jpeg";
         if (path.endsWith(".svg")) return "image/svg+xml";
         if (path.endsWith(".json")) return "application/json; charset=utf-8";
         return "application/octet-stream";
     }
 
+    /**
+     * How long the browser may reuse an asset without asking.
+     *
+     * <p>Markup, styles and scripts are revalidated every time. They have no version in their
+     * URL, so caching them meant a mod update left viewers on the previous build's stylesheet
+     * until the cache expired — a day of a subtly broken layout. Revalidation is cheap here:
+     * the ETag turns an unchanged file into a 304 with no body, and a dashboard has a handful
+     * of viewers, not thousands.</p>
+     *
+     * <p>Images are content-addressed enough in practice (a redesign changes their paths), so
+     * they keep a long cache.</p>
+     */
     private static String cacheControl(String path) {
-        if (path.endsWith(".html")) {
+        if (path.endsWith(".html") || path.endsWith(".js") || path.endsWith(".css")) {
             return "no-cache";
-        }
-        if (path.endsWith(".js") || path.endsWith(".css")) {
-            return "public, max-age=86400, stale-while-revalidate=604800";
         }
         return "public, max-age=604800, stale-while-revalidate=86400";
     }

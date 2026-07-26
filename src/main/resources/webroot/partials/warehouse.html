@@ -24,7 +24,15 @@
                 <div class="mc-tip flex items-center gap-3">
                     <img class="mc-icon" loading="lazy" :src="textureUrl(s.itemKey)" :alt="s.name">
                     <div class="flex-1 min-w-0">
-                        <div class="mc-name" x-text="s.name"></div>
+                        <div class="mc-head">
+                            <div class="mc-name" x-text="s.name"></div>
+                            <span class="craft-mark" x-show="s.craftable" title="A colony worker can craft this">
+                                <svg viewBox="0 0 24 24" width="10" height="10" fill="none" stroke="currentColor"
+                                     stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M14 3l7 7-4 4-7-7z"/><path d="M11 7L3 15v6h6l8-8"/>
+                                </svg>
+                            </span>
+                        </div>
                         <div class="mc-line" x-show="s.craftedIn">Crafted in the <span class="mc-val" x-text="s.craftedIn"></span></div>
                         <template x-for="(c, cx) in (s.components || [])" :key="cx">
                             <div class="mc-line"><span x-text="c.label"></span>: <span class="mc-val" x-text="c.material"></span></div>
@@ -36,7 +44,7 @@
             </template>
         </div>
 
-        <p class="text-[11.5px] text-slate-600 text-center mt-3" x-show="warehouseHidden"
+        <p class="text-[12.5px] text-slate-400 text-center mt-3" x-show="warehouseHidden"
            x-text="num(warehouseHidden) + ' more entries — narrow it down with the search box.'"></p>
 
         <div class="empty" x-show="!warehouseStacks.length">

@@ -23,7 +23,7 @@ public class CombatInfo {
     public List<Post> posts = new ArrayList<>();
     public List<Event> events = new ArrayList<>();
 
-    /** A citizen with a combat job. */
+    /** A citizen with a combat job, and the kit they are carrying. */
     public static class Guard {
         public int id;
         public String name;
@@ -33,7 +33,15 @@ public class CombatInfo {
         public double health;
         public double maxHealth;
         public boolean spawned;
-        public String building;
+
+        public String building;      // the guard post they are stationed at
+        public int buildingId = -1;
+        public int buildingLevel;    // that post's level
+
+        public List<EquipmentInfo> equipment = new ArrayList<>();
+        public int armorPoints;      // total vanilla armour value across the four slots
+        public String weapon;        // main-hand item name, null when empty-handed
+
         public int x;
         public int y;
         public int z;

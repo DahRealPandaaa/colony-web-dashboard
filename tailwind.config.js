@@ -11,23 +11,24 @@ module.exports = {
     theme: {
         extend: {
             colors: {
-                // Page and surface ramp, darkest first.
+                // Page and surface ramp, darkest first. Deliberately lifted off pure black —
+                // the near-black version read as a void behind the panels rather than a page.
                 ink: {
-                    950: "#06090F",
-                    900: "#0A0E15",
-                    850: "#0E141D",
-                    800: "#131A25",
-                    700: "#1A2231",
-                    600: "#232D3E",
+                    950: "#121722",
+                    900: "#191F2C",
+                    850: "#1E2634",
+                    800: "#252E3E",
+                    700: "#2F3A4C",
+                    600: "#3C4859",
                 },
                 // Hairlines and dividers.
                 line: {
-                    DEFAULT: "#1C2534",
-                    strong: "#2A3547",
+                    DEFAULT: "#303B4C",
+                    strong: "#414F63",
                 },
                 accent: {
                     DEFAULT: "#38BDF8",
-                    soft: "#7DD3FC",
+                    soft: "#93DBFC",
                     deep: "#2563EB",
                 },
             },

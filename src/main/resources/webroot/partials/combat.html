@@ -16,9 +16,9 @@
                         </svg>
                     </span>
                     <div class="min-w-0">
-                        <div class="font-bold text-[14.5px]" :class="combat.underAttack ? 'text-rose-300' : ''"
+                        <div class="font-bold text-[16px]" :class="combat.underAttack ? 'text-rose-300' : ''"
                              x-text="raidHeadline"></div>
-                        <div class="text-[12.5px] text-slate-500"
+                        <div class="text-[14.5px] text-slate-400"
                              x-text="combat.nightsSinceRaid + ' nights since the last raid · raid level ' + combat.raidLevel
                                      + (combat.spiesEnabled ? ' · spies active' : '')"></div>
                     </div>
@@ -61,19 +61,53 @@
                         </div>
                         <div class="panel-body space-y-2">
                             <template x-for="g in combat.guards" :key="g.id">
-                                <div class="card !p-3 flex items-center gap-3">
-                                    <span class="w-8 h-8 shrink-0 grid place-items-center rounded-lg text-[12.5px] font-bold
-                                                 bg-rose-500/15 border border-rose-500/30 text-rose-300 tabular-nums"
-                                          x-text="g.level"></span>
-                                    <div class="flex-1 min-w-0">
-                                        <div class="font-semibold text-[13.5px] truncate" x-text="g.name"></div>
-                                        <div class="text-[11.5px] text-slate-600 truncate"
-                                             x-text="g.job + (g.building ? ' · ' + g.building : '')"></div>
+                                <div class="card !p-3">
+                                    <div class="flex items-center gap-3">
+                                        <span class="w-8 h-8 shrink-0 grid place-items-center rounded-lg text-[12.5px] font-bold
+                                                     bg-rose-500/15 border border-rose-500/30 text-rose-300 tabular-nums"
+                                              x-text="g.level"></span>
+                                        <div class="flex-1 min-w-0">
+                                            <div class="font-semibold text-[14.5px] truncate" x-text="g.name"></div>
+                                            <div class="text-[12.5px] text-slate-400 truncate" x-text="g.job"></div>
+                                        </div>
+                                        <div class="w-24 shrink-0">
+                                            <div class="meter hp"><span :style="'width:' + guardHealthPct(g) + '%'"></span></div>
+                                            <div class="text-[11.5px] text-slate-400 tabular-nums mt-1 text-right"
+                                                 x-text="g.health.toFixed(0) + '/' + g.maxHealth.toFixed(0)"></div>
+                                        </div>
                                     </div>
-                                    <div class="w-24 shrink-0">
-                                        <div class="meter hp"><span :style="'width:' + guardHealthPct(g) + '%'"></span></div>
-                                        <div class="text-[10.5px] text-slate-600 tabular-nums mt-1 text-right"
-                                             x-text="g.health.toFixed(0) + '/' + g.maxHealth.toFixed(0)"></div>
+
+                                    <div class="flex items-center gap-2 mt-2.5 flex-wrap">
+                                        <!-- Posted at, with the tower's level: a level 5 tower is where the best kit lives. -->
+                                        <span class="chip !py-1" x-show="g.building">
+                                            <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor"
+                                                 stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                                <path d="M3 21h18"/><path d="M5 21V8l7-5 7 5v13"/>
+                                            </svg>
+                                            <span x-text="g.building"></span>
+                                            <b class="tabular-nums" x-show="g.buildingLevel" x-text="'L' + g.buildingLevel"></b>
+                                        </span>
+                                        <span class="chip !py-1" x-show="g.armorPoints">
+                                            <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor"
+                                                 stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                                <path d="M12 3l7.5 3v5.7c0 4.5-3.2 8.4-7.5 9.8-4.3-1.4-7.5-5.3-7.5-9.8V6z"/>
+                                            </svg>
+                                            <b class="tabular-nums" x-text="g.armorPoints"></b>
+                                        </span>
+
+                                        <span class="ml-auto flex items-center gap-1">
+                                            <template x-for="(e, ei) in (g.equipment || [])" :key="ei">
+                                                <span class="gear" :class="e.enchanted ? 'ench' : ''"
+                                                      :title="e.slot + ': ' + e.name
+                                                              + (e.armorPoints ? ' (+' + e.armorPoints + ' armour)' : '')
+                                                              + (e.durabilityPct < 100 ? ' · ' + e.durabilityPct + '% durability' : '')">
+                                                    <img class="pixelated w-full h-full" loading="lazy"
+                                                         :src="textureUrl(e.itemKey)" :alt="e.name">
+                                                </span>
+                                            </template>
+                                            <span class="text-[11.5px] text-slate-500 italic"
+                                                  x-show="!(g.equipment || []).length">no kit</span>
+                                        </span>
                                     </div>
                                 </div>
                             </template>
@@ -92,11 +126,13 @@
                             <div class="panel-body space-y-2">
                                 <template x-for="p in combat.posts" :key="p.id">
                                     <div class="card !p-3 flex items-center gap-3">
-                                        <img class="w-9 h-9 pixelated rounded-lg bg-black/25 border border-line p-1 shrink-0"
-                                             loading="lazy" :src="textureUrl(p.blockId || 'minecolonies:blockhutguardtower')" :alt="p.name">
+                                        <img class="w-11 h-11 object-contain pixelated rounded-lg bg-black/25 border border-line p-0.5 shrink-0"
+                                             loading="lazy" :src="buildingArt(p) || textureUrl(p.blockId || 'minecolonies:blockhutguardtower')"
+                                             :alt="p.name"
+                                             @error="postIconFallback($el, p)">
                                         <div class="flex-1 min-w-0">
-                                            <div class="font-semibold text-[13.5px] truncate" x-text="p.name"></div>
-                                            <div class="text-[11.5px] text-slate-600"
+                                            <div class="font-semibold text-[14.5px] truncate" x-text="p.name"></div>
+                                            <div class="text-[12.5px] text-slate-400"
                                                  x-text="'Level ' + p.level + ' · ' + p.assigned + '/' + p.capacity + ' staffed'"></div>
                                         </div>
                                         <span class="sdot shrink-0" :class="postStatus(p)"><i></i></span>
@@ -113,8 +149,8 @@
                             <div class="panel-body space-y-2">
                                 <template x-for="e in combat.events" :key="e.id">
                                     <div class="card !p-3 !border-rose-500/30 !bg-rose-500/[0.05]">
-                                        <div class="font-semibold text-[13.5px]" x-text="e.name"></div>
-                                        <div class="text-[11.5px] text-slate-500 tabular-nums"
+                                        <div class="font-semibold text-[14.5px]" x-text="e.name"></div>
+                                        <div class="text-[12.5px] text-slate-400 tabular-nums"
                                              x-text="e.status + ' · ' + e.x + ', ' + e.y + ', ' + e.z"></div>
                                     </div>
                                 </template>

@@ -51,13 +51,6 @@ export function stateLabel(state) {
     return "Not started";
 }
 
-/** Escape text destined for innerHTML (the colony map builds SVG markup as a string). */
-export function escapeHtml(value) {
-    return String(value == null ? "" : value).replace(/[&<>"]/g, (ch) => ({
-        "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;",
-    }[ch]));
-}
-
 /** Case-insensitive "does any of these fields contain the query" test. */
 export function matches(query, ...fields) {
     if (!query) return true;

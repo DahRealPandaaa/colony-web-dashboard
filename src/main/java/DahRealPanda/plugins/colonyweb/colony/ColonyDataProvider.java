@@ -31,6 +31,7 @@ public final class ColonyDataProvider {
     private final CitizenScanner citizenScanner = new CitizenScanner();
     private final CombatScanner combatScanner = new CombatScanner();
     private final ResearchScanner researchScanner = new ResearchScanner();
+    private final RecipeScanner recipeScanner = new RecipeScanner();
     private final StatsBuilder statsBuilder = new StatsBuilder();
 
     public ColonyDataProvider(MinecraftServer server) {
@@ -125,11 +126,16 @@ public final class ColonyDataProvider {
         CitizenScanner.Result citizens = citizenScanner.scan(colony, ctx.buildingByPos);
         scan.citizens = citizens.citizens;
         scan.inventories = citizens.inventories;
-        scan.combat = combatScanner.scan(colony, scan.citizens, ctx.buildingByPos, ctx.rawBuildingByPos);
+        scan.equipment = citizens.equipment;
+        scan.combat = combatScanner.scan(colony, scan.citizens, citizens.equipment,
+                ctx.buildingByPos, ctx.rawBuildingByPos);
         if (includeResearch) {
             scan.research = researchScanner.scan(colony);
         }
         statsBuilder.fill(colony, snapshot, scan.citizens, scan.combat);
+
+        // Colony-wide fact, so it can only be applied once every payload above exists.
+        RecipeScanner.markCraftable(scan, recipeScanner.scan(buildings));
 
         LOGGER.debug("{} colony {} ('{}'): buildings={} workOrders={} citizens={} guards={} warehouse={} ({} stacks)",
                 ColonyWeb.LOG, snapshot.id, snapshot.name, snapshot.buildings.size(),

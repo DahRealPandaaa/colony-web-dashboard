@@ -127,6 +127,7 @@ public final class ApiHandler implements HttpHandler {
         Map<String, Object> body = new LinkedHashMap<>();
         body.put("citizen", citizen.get());
         body.put("inventory", cache.inventory(colonyId, citizenId));
+        body.put("equipment", cache.equipment(colonyId, citizenId));
         JsonUtil.sendJson(exchange, 200, body);
     }
 

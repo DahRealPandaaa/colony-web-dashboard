@@ -37,19 +37,35 @@ public final class BlockModel {
     }
 
     /**
-     * Texture references used by actual geometry, in first-use order. This ordering is what
-     * material components are matched against, so it must be deterministic.
+     * Texture references used by actual geometry, ordered by the model's own {@code textures}
+     * declaration.
+     *
+     * <p>The order matters: when a Domum block's material components cannot be matched to
+     * variables by name — framed blocks key their components by the default <em>block</em>
+     * (e.g. {@code minecraft:dark_oak_planks}), which shares no word with a variable like
+     * {@code #frame} — the two lists get zipped positionally. Declaration order lines up with
+     * the component order; the order faces happen to be traversed in does not, which put each
+     * material on the wrong face.</p>
      */
     public List<String> usedTextureRefs() {
-        Set<String> vars = new LinkedHashSet<>();
+        Set<String> used = new LinkedHashSet<>();
         for (Element element : elements) {
             for (Face face : element.faces.values()) {
                 if (face.texture != null) {
-                    vars.add(face.texture);
+                    used.add(face.texture);
                 }
             }
         }
-        return new ArrayList<>(vars);
+        // Declared order first, then anything referenced by geometry but never declared.
+        Set<String> ordered = new LinkedHashSet<>();
+        for (String name : textures.keySet()) {
+            String ref = "#" + name;
+            if (used.contains(ref)) {
+                ordered.add(ref);
+            }
+        }
+        ordered.addAll(used);
+        return new ArrayList<>(ordered);
     }
 
     /** A single cuboid of the model. */

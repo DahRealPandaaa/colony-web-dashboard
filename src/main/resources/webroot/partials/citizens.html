@@ -28,37 +28,39 @@
                 <article class="card card-click" tabindex="0"
                          @click="openCitizen(c)" @keydown.enter="openCitizen(c)">
                     <div class="flex items-start gap-3">
-                        <img class="w-10 h-10 pixelated rounded-lg bg-black/25 border border-line p-1 shrink-0"
-                             loading="lazy" :src="citizenIcon(c)" :alt="c.job">
+                        <!-- object-top crops the full-body render to a head-and-shoulders bust. -->
+                        <img class="w-12 h-14 object-cover object-top rounded-lg bg-black/30 border border-line shrink-0"
+                             loading="lazy" :src="citizenArt(c)" :alt="c.job"
+                             @error="citizenIconFallback($el, c)">
                         <div class="flex-1 min-w-0">
                             <div class="flex items-center gap-2">
-                                <span class="font-bold text-[14.5px] truncate" x-text="c.name"></span>
+                                <span class="font-bold text-[16px] truncate" x-text="c.name"></span>
                                 <span class="ba b-repair" x-show="c.child">Child</span>
                                 <span class="w-1.5 h-1.5 rounded-full shrink-0 ml-auto"
                                       :class="c.spawned ? 'bg-emerald-400' : 'bg-ink-700'"
                                       :title="c.spawned ? 'Loaded in the world' : 'Not loaded'"></span>
                             </div>
                             <div class="text-[12.5px] text-accent-soft font-semibold truncate" x-text="c.job"></div>
-                            <div class="text-[11.5px] text-slate-600 truncate" x-text="c.workBuilding || 'No workplace'"></div>
+                            <div class="text-[12.5px] text-slate-400 truncate" x-text="c.workBuilding || 'No workplace'"></div>
                         </div>
                     </div>
 
                     <div class="mt-3 space-y-2">
                         <div>
-                            <div class="flex justify-between text-[11px] text-slate-500 mb-1">
+                            <div class="flex justify-between text-[12px] text-slate-400 mb-1">
                                 <span>Health</span>
                                 <span class="tabular-nums" x-text="c.health.toFixed(0) + ' / ' + c.maxHealth.toFixed(0)"></span>
                             </div>
                             <div class="meter hp"><span :style="'width:' + pct(c.health, c.maxHealth) + '%'"></span></div>
                         </div>
                         <div>
-                            <div class="flex justify-between text-[11px] text-slate-500 mb-1">
+                            <div class="flex justify-between text-[12px] text-slate-400 mb-1">
                                 <span>Saturation</span><span class="tabular-nums" x-text="c.saturation.toFixed(1)"></span>
                             </div>
                             <div class="meter food"><span :style="'width:' + pct(c.saturation, 20) + '%'"></span></div>
                         </div>
                         <div>
-                            <div class="flex justify-between text-[11px] text-slate-500 mb-1">
+                            <div class="flex justify-between text-[12px] text-slate-400 mb-1">
                                 <span>Happiness</span><span class="tabular-nums" x-text="c.happiness.toFixed(1)"></span>
                             </div>
                             <div class="meter happy"><span :style="'width:' + pct(c.happiness, 10) + '%'"></span></div>
@@ -71,7 +73,7 @@
                                 <span x-text="s.name"></span><b class="tabular-nums" x-text="s.level"></b>
                             </span>
                         </template>
-                        <span class="ml-auto text-[11px] text-slate-600 tabular-nums"
+                        <span class="ml-auto text-[12px] text-slate-400 tabular-nums"
                               x-text="c.inventoryUsed + '/' + c.inventorySize"></span>
                     </div>
                 </article>
