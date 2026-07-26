@@ -16,8 +16,10 @@ bin/
 logs/
 *.log
 
-# Dashboard runtime cache (downloaded vanilla client jar, generated textures)
-colonyweb-cache/
+# Dashboard runtime data (auth.json, downloaded vanilla client jar, generated textures).
+# Leading slash matters — an unanchored "colonyweb/" would also match the source package.
+/colonyweb/
+/colonyweb-cache/
 
 # IDE files
 .idea/

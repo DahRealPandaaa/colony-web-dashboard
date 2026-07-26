@@ -1,0 +1,128 @@
+<template x-if="tab === 'combat'">
+    <div class="animate-fade-up">
+        <div class="empty" x-show="!combat">Loading combat data…</div>
+
+        <template x-if="combat">
+            <div class="flex flex-col gap-4">
+                <!-- Raid banner -->
+                <div class="panel !rounded-2xl px-4 py-3.5 flex items-center gap-3.5"
+                     :class="combat.underAttack ? '!border-rose-500/50 !bg-rose-500/[0.08]' : ''">
+                    <span class="w-10 h-10 shrink-0 grid place-items-center rounded-xl border"
+                          :class="combat.underAttack ? 'bg-rose-500/15 border-rose-500/40 text-rose-300'
+                                                     : 'bg-emerald-500/10 border-emerald-500/30 text-emerald-300'">
+                        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor"
+                             stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M12 3l7.5 3v5.7c0 4.5-3.2 8.4-7.5 9.8-4.3-1.4-7.5-5.3-7.5-9.8V6z"/>
+                        </svg>
+                    </span>
+                    <div class="min-w-0">
+                        <div class="font-bold text-[14.5px]" :class="combat.underAttack ? 'text-rose-300' : ''"
+                             x-text="raidHeadline"></div>
+                        <div class="text-[12.5px] text-slate-500"
+                             x-text="combat.nightsSinceRaid + ' nights since the last raid · raid level ' + combat.raidLevel
+                                     + (combat.spiesEnabled ? ' · spies active' : '')"></div>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-2 md:grid-cols-5 gap-3">
+                    <div class="tile">
+                        <div class="tile-label">Guards</div>
+                        <div class="tile-value" x-text="combat.guardCount"></div>
+                        <div class="tile-sub" x-text="combat.guardCapacity + ' slots'"></div>
+                    </div>
+                    <div class="tile">
+                        <div class="tile-label">Avg. level</div>
+                        <div class="tile-value" x-text="combat.averageGuardLevel.toFixed(1)"></div>
+                    </div>
+                    <div class="tile">
+                        <div class="tile-label">Avg. health</div>
+                        <div class="tile-value" x-text="Math.round(combat.averageHealthPct) + '%'"></div>
+                        <div class="meter hp mt-2"><span :style="'width:' + Math.round(combat.averageHealthPct) + '%'"></span></div>
+                    </div>
+                    <div class="tile">
+                        <div class="tile-label">Guard posts</div>
+                        <div class="tile-value" x-text="combat.posts.length"></div>
+                    </div>
+                    <div class="tile">
+                        <div class="tile-label">Graves</div>
+                        <div class="tile-value" :class="combat.graves ? 'text-rose-300' : ''" x-text="combat.graves"></div>
+                        <div class="tile-sub" x-show="combat.graves">need burying</div>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 xl:grid-cols-[1fr_360px] gap-4">
+                    <section class="panel self-start">
+                        <div class="panel-head">
+                            <div>
+                                <h2 class="panel-title">Guard roster</h2>
+                                <p class="panel-sub">Every citizen with a combat job</p>
+                            </div>
+                            <span class="chip" x-text="combat.guards.length"></span>
+                        </div>
+                        <div class="panel-body space-y-2">
+                            <template x-for="g in combat.guards" :key="g.id">
+                                <div class="card !p-3 flex items-center gap-3">
+                                    <span class="w-8 h-8 shrink-0 grid place-items-center rounded-lg text-[12.5px] font-bold
+                                                 bg-rose-500/15 border border-rose-500/30 text-rose-300 tabular-nums"
+                                          x-text="g.level"></span>
+                                    <div class="flex-1 min-w-0">
+                                        <div class="font-semibold text-[13.5px] truncate" x-text="g.name"></div>
+                                        <div class="text-[11.5px] text-slate-600 truncate"
+                                             x-text="g.job + (g.building ? ' · ' + g.building : '')"></div>
+                                    </div>
+                                    <div class="w-24 shrink-0">
+                                        <div class="meter hp"><span :style="'width:' + guardHealthPct(g) + '%'"></span></div>
+                                        <div class="text-[10.5px] text-slate-600 tabular-nums mt-1 text-right"
+                                             x-text="g.health.toFixed(0) + '/' + g.maxHealth.toFixed(0)"></div>
+                                    </div>
+                                </div>
+                            </template>
+                            <p class="empty" x-show="!combat.guards.length">No guards employed.</p>
+                        </div>
+                    </section>
+
+                    <div class="flex flex-col gap-4">
+                        <aside class="panel">
+                            <div class="panel-head">
+                                <div>
+                                    <h2 class="panel-title">Guard posts</h2>
+                                    <p class="panel-sub">Towers and barracks</p>
+                                </div>
+                            </div>
+                            <div class="panel-body space-y-2">
+                                <template x-for="p in combat.posts" :key="p.id">
+                                    <div class="card !p-3 flex items-center gap-3">
+                                        <img class="w-9 h-9 pixelated rounded-lg bg-black/25 border border-line p-1 shrink-0"
+                                             loading="lazy" :src="textureUrl(p.blockId || 'minecolonies:blockhutguardtower')" :alt="p.name">
+                                        <div class="flex-1 min-w-0">
+                                            <div class="font-semibold text-[13.5px] truncate" x-text="p.name"></div>
+                                            <div class="text-[11.5px] text-slate-600"
+                                                 x-text="'Level ' + p.level + ' · ' + p.assigned + '/' + p.capacity + ' staffed'"></div>
+                                        </div>
+                                        <span class="sdot shrink-0" :class="postStatus(p)"><i></i></span>
+                                    </div>
+                                </template>
+                                <p class="empty" x-show="!combat.posts.length">No guard towers or barracks built.</p>
+                            </div>
+                        </aside>
+
+                        <aside class="panel !border-rose-500/30" x-show="combat.events.length">
+                            <div class="panel-head">
+                                <h2 class="panel-title text-rose-300">Active events</h2>
+                            </div>
+                            <div class="panel-body space-y-2">
+                                <template x-for="e in combat.events" :key="e.id">
+                                    <div class="card !p-3 !border-rose-500/30 !bg-rose-500/[0.05]">
+                                        <div class="font-semibold text-[13.5px]" x-text="e.name"></div>
+                                        <div class="text-[11.5px] text-slate-500 tabular-nums"
+                                             x-text="e.status + ' · ' + e.x + ', ' + e.y + ', ' + e.z"></div>
+                                    </div>
+                                </template>
+                            </div>
+                        </aside>
+                    </div>
+                </div>
+            </div>
+        </template>
+    </div>
+</template>

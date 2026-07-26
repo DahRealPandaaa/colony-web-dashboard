@@ -1,0 +1,191 @@
+# ColonyWeb
+
+**Your MineColonies colony, in a browser. Live.**
+
+ColonyWeb turns your Minecraft server into a colony dashboard you can open from any browser —
+on the same PC, from your phone on the couch, or from work when you should be doing something
+else. See exactly which builder is on which building, what every construction site is still
+missing, how happy your citizens are, what your warehouse actually holds, and whether a raid is
+coming.
+
+Nothing to install on the client. Only the server needs the mod — everyone else just opens a
+link.
+
+---
+
+## Sign in with a code from the game
+
+No accounts, no passwords, no email. Run `/colonyweb sync` in-game and you get a short code:
+
+```
+Open http://your-server:8723/ and enter this code:
+  A4TC-9KHM                                    ← click to copy
+Valid for 10 minutes · unlocks 2 colony/colonies.
+```
+
+Type it into the dashboard and you're in — and you stay signed in for a month.
+
+**You only ever see your own colonies.** ColonyWeb reads which colonies you actually belong to
+and shows you those. Other people's colonies aren't listed, aren't reachable, and can't even be
+probed for. Server operators see everything, and can pair players, hand out access to specific
+colonies, or sign someone out of every browser they've used.
+
+Running a private or LAN server and don't want the login at all? Turn it off in the config and
+the dashboard is open to anyone who can reach it.
+
+---
+
+## Seven tabs
+
+### Overview
+The at-a-glance page. Citizens, happiness, buildings, defence, warehouse stock, research,
+builders and average saturation as headline numbers — then every work order with its progress
+bar, target level and assigned builder, and a builders panel showing exactly who is working on
+what and how far along they are.
+
+### Buildings & decorations
+A card for every building **and decoration** in the colony: name, current → target level, who's
+building it, a live progress bar, and at a glance how many of its required resources are
+satisfied, deliverable or missing.
+
+Click any card for the full breakdown — every required item with its icon, how many are **in the
+hut**, how many are **in the warehouse**, how many are still **needed**, and a colour-coded
+status. It's the in-game resource scroll, except readable, searchable, and sorted so shortfalls
+land at the top.
+
+Search across building names *and* the items they need ("who needs bricks?"), toggle decorations
+on and off, show only what's under construction, and sort by missing-first, progress, name or
+level.
+
+### Citizens
+Everyone in the colony as a card: their job, their workplace, health / saturation / happiness
+meters, their job's primary and secondary skills, and how full their pack is.
+
+Click a citizen for the whole picture — all eleven **skills** with levels, their **perks and
+grievances** (the happiness modifiers the game tracks, colour-coded by whether they're helping
+or hurting), and their **complete inventory**.
+
+Search by name, job or building. Filter to one job. Sort by job, name, total skill, happiness,
+or lowest health first when you're hunting for whoever is about to starve.
+
+### Research
+Every research branch with completed / in-progress / total counts and a progress bar. A dedicated
+"underway" panel puts whatever your university is actually working on right at the top, with live
+progress.
+
+Per research: its tier, its state, the effects it grants, and its item cost with icons. Filter by
+branch and by state — everything, in progress, completed, or not started yet.
+
+### Combat
+A raid banner that tells you straight away whether the colony is under attack, how many nights
+since the last raid, the raid level, and whether spies are active.
+
+Then the defence numbers: guard count against available slots, average guard level, average guard
+health, guard posts, and **unclaimed graves** that still need burying. Below that, the full guard
+roster with each guard's level and health, every guard tower and barracks with how well it's
+staffed, and any active raid events with their position.
+
+### Warehouse
+Everything stored across the colony, aggregated into one searchable list. Sort by most stock or
+by name, search by item or material, and filter down to just your Domum Ornamentum blocks.
+
+### Map
+A top-down plan of the colony, north up, auto-fitted to whatever you've built. Buildings,
+sites under construction, decorations and live citizen positions — hover any marker for its
+details.
+
+---
+
+## It updates itself
+
+The dashboard is live. When a builder makes progress, a work order finishes, resources arrive, or
+a raid starts, the page updates on its own. No refresh button, no stale numbers. A status
+indicator in the corner tells you whether the connection is healthy.
+
+Every tab is deep-linkable, so you can bookmark "my colony, buildings tab" and land straight
+there.
+
+---
+
+## Real item icons — including Domum Ornamentum
+
+Every item and block shows its actual icon, generated by the server, right down to modded blocks.
+
+**Domum Ornamentum blocks get special treatment.** Instead of showing you a flat swatch of one
+material, ColonyWeb renders the block's real shape in its real materials — a *Brick Extra
+Shingle* looks like a shingle made of brick, and a stair looks like a stair. Every textured
+variant gets its own icon.
+
+Item lists are styled like the in-game tooltip, with the same material lines the game shows you:
+
+```
+┌────────────────────────────────────────┐
+│ ▣  Brick Extra Shingles          x1284 │
+│    Crafted in the Architects Cutter    │
+│    Supported by: Oak Planks            │
+│    Main Material: Brick Extra          │
+└────────────────────────────────────────┘
+```
+
+So the thing you're looking at on the website is the thing you're looking at in your inventory.
+
+---
+
+## Colour code, everywhere
+
+One rule across every screen:
+
+- 🟢 **Green** — the hut already has it.
+- 🟡 **Amber** — the warehouse can cover the shortfall.
+- 🔴 **Red** — nobody has it. This is what's blocking you.
+
+---
+
+## Built to actually use
+
+- **Dark, calm interface.** Designed to be left open on a second monitor without shouting at you.
+- **Works on a phone.** The sidebar folds into a tab strip on narrow screens; nothing gets cut off.
+- **Multiple colonies.** Switch between everything you belong to from the top bar.
+- **Fast.** Heavier pages load only when you open them, so switching tabs stays snappy.
+
+---
+
+## Commands
+
+| Command | Who | What it does |
+|---------|-----|--------------|
+| `/colonyweb` | anyone | Prints a clickable link to the dashboard. |
+| `/colonyweb sync` | anyone | Refreshes your colony list and gives you a sign-in code. |
+| `/colonyweb port` | anyone | Shows which port the dashboard is on. |
+| `/colonyweb status` | operators | Is it running, who's watching, is MineColonies detected. |
+| `/colonyweb sync <player>` | operators | Issues a sign-in code for someone else. |
+| `/colonyweb access grant <player> <id>` | operators | Gives a player access to one extra colony. |
+| `/colonyweb access revoke <player> <id>` | operators | Takes that access back. |
+| `/colonyweb access list <player>` | operators | Shows everything a player can see. |
+| `/colonyweb logout <player>` | operators | Signs a player out of every browser. |
+
+---
+
+## Setup
+
+1. Drop the jar in your server's `mods` folder, alongside MineColonies.
+2. Start the server. Adjust the port in the generated config if you need to, and restart.
+3. Run `/colonyweb` for the link and `/colonyweb sync` for your code.
+
+Tell your players to do step 3 and you're done.
+
+**Requirements:** Minecraft 1.20.1, Forge 47.4.0, and MineColonies. Domum Ornamentum is optional
+— install it and you get the textured-block icons and material breakdowns too.
+
+**Server only.** Players don't install anything.
+
+---
+
+## A note on exposing it
+
+The dashboard is **read-only** — nothing on it can change your world, move a citizen, or cancel a
+build. It shows information and nothing else.
+
+If you're opening it up to the internet rather than keeping it on your LAN, put it behind a
+reverse proxy with HTTPS. The sign-in keeps strangers out either way, but an encrypted connection
+is the right call for anything public.

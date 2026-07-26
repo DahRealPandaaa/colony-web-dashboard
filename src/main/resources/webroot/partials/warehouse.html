@@ -1,0 +1,47 @@
+<template x-if="tab === 'warehouse'">
+    <div class="animate-fade-up">
+        <div class="toolbar">
+            <div class="searchbox flex-1 min-w-[200px]">
+                <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2">
+                    <circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/>
+                </svg>
+                <input type="search" placeholder="Search stock or materials…" x-model="whSearch">
+            </div>
+            <select class="field py-1.5" x-model="whSort" aria-label="Sort stock">
+                <option value="count">Most stock</option>
+                <option value="alpha">Name</option>
+            </select>
+            <label class="switch">
+                <input type="checkbox" x-model="whDomumOnly"><span class="track"></span>
+                <span class="switch-label">Domum only</span>
+            </label>
+            <span class="chip on ml-auto" x-text="num(stats.warehouseItems) + ' items'"></span>
+        </div>
+
+        <!-- Item cards deliberately mirror the in-game tooltip, material lines and all. -->
+        <div class="grid grid-auto-items gap-2.5">
+            <template x-for="(s, si) in warehouseStacks" :key="si">
+                <div class="mc-tip flex items-center gap-3">
+                    <img class="mc-icon" loading="lazy" :src="textureUrl(s.itemKey)" :alt="s.name">
+                    <div class="flex-1 min-w-0">
+                        <div class="mc-name" x-text="s.name"></div>
+                        <div class="mc-line" x-show="s.craftedIn">Crafted in the <span class="mc-val" x-text="s.craftedIn"></span></div>
+                        <template x-for="(c, cx) in (s.components || [])" :key="cx">
+                            <div class="mc-line"><span x-text="c.label"></span>: <span class="mc-val" x-text="c.material"></span></div>
+                        </template>
+                        <div class="mc-line" x-show="!s.domum" x-text="s.itemKey.split('#')[0]"></div>
+                    </div>
+                    <div class="mc-count" x-text="'x' + num(s.count)"></div>
+                </div>
+            </template>
+        </div>
+
+        <p class="text-[11.5px] text-slate-600 text-center mt-3" x-show="warehouseHidden"
+           x-text="num(warehouseHidden) + ' more entries — narrow it down with the search box.'"></p>
+
+        <div class="empty" x-show="!warehouseStacks.length">
+            <p class="empty-title" x-show="snap.warehouse.present">No stock matches your search.</p>
+            <p class="empty-title" x-show="!snap.warehouse.present">This colony has no warehouse.</p>
+        </div>
+    </div>
+</template>

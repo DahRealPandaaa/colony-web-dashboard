@@ -1,8 +1,8 @@
-# Colony Web Dashboard — Project Plan & Specification
+# ColonyWeb — Project Plan & Specification
 
-> Paste this whole file into your workspace (kept as `PLAN.md`) so Copilot has full
-> context on the goal, architecture, and every module to build. This is the single
-> source of truth for the mod.
+> The design record for the mod: the goal, the decisions behind the architecture, and the
+> task checklist. `README.md` documents the mod **as it is today** (structure, endpoints,
+> config, commands) — when the two disagree, the README wins.
 
 ---
 
@@ -34,8 +34,8 @@ The mod does **not** need to be installed on the client — only on the server.
 | Live updates | **SSE** stream (`/events`); server re-scans on an interval and pushes deltas. |
 | MineColonies access | **Reflection-based soft dependency** — the mod compiles and loads without MineColonies present, and binds to its API at runtime. |
 | Textures | Generated **server-side** as PNG and served by the web server. A dedicated server has no vanilla client textures, so we **download & cache the vanilla client jar assets** for the running MC version. Modded textures (MineColonies, Domum Ornamentum) are read from the installed mod jars on the classpath. |
-| Domum Ornamentum | Resolve the block's material component(s) from stack NBT and use the material's texture as the icon (flat inventory-face approximation). |
-| Block icons | Flat inventory-face texture (not a 3D isometric render) for v1. |
+| Domum Ornamentum | Resolve **every** material component from stack NBT. Each becomes a tooltip line ("Supported by: Oak Planks", "Main Material: Brick Extra"), and the components drive the icon render. |
+| Block icons | Ordinary items use the flat inventory-face texture. **Domum Ornamentum blocks are rendered in 3D** (`texture/IsometricRenderer`) from their own model geometry with the vanilla GUI transform, so the icon shows the actual shape in the actual materials. Falls back to the flat material texture when a model cannot be parsed. |
 | JSON | Use `com.google.gson.Gson` (bundled with Minecraft). |
 
 ---
@@ -72,54 +72,41 @@ The mod does **not** need to be installed on the client — only on the server.
 
 ## 5. Package / File Layout
 
-Base package: `DahRealPanda.plugins.untitled1` (mod id `untitled1`).
+Base package: `DahRealPanda.plugins.colonyweb` (mod id `colonyweb`).
+
+The full, current tree is in **README.md → Project Structure**. The shape it settled into:
 
 ```
-src/main/java/DahRealPanda/plugins/untitled1/
-  Untitled1.java                 # @Mod entry — wires everything, server lifecycle events
-  Config.java                    # (done) server config
+colonyweb/
+  ColonyWeb.java        @Mod entry — server lifecycle + command wiring
+  Config.java           port, bind, refresh, assets, host, auth settings
+  ColonyWebService.java wires web server, auth, provider and scheduler together
 
-  web/
-    WebServer.java               # HttpServer bootstrap, routing, lifecycle
-    SseBroadcaster.java          # tracks SSE clients, pushes events
-    handlers/
-      ApiHandler.java            # /api/colonies, /api/colony/{id}
-      EventsHandler.java         # /events  (SSE)
-      TextureHandler.java        # /textures/{key}.png
-      StaticHandler.java         # serves webroot/ assets (index.html, app.js, style.css)
-    JsonUtil.java                # Gson instance + helpers
+  auth/       pairing codes, sessions, grants, persistence, session cookie
+  web/        HttpServer bootstrap, SSE broadcaster, JSON helpers
+    handlers/ auth, request auth, api, events, textures, static
+  colony/     one scanner per concern (lookup, buildings, work orders, warehouse,
+              citizens, research, combat), a StatsBuilder, the reflection layer,
+              the cache, and model/ DTOs
+  service/    refresh scheduler + the change hash driving SSE
+  texture/    icon pipeline: model resolution, isometric rasterizer, DO materials, caches
+  util/       text/component helpers
+  command/    the Brigadier tree + the access command bodies
 
-  colony/
-    ColonyDataProvider.java      # top-level: enumerate colonies + build snapshots (reflection)
-    MineColoniesReflect.java     # cached reflection handles (classes/methods) + null-safety
-    model/
-      ColonySummary.java         # id, name, dimension, owner, position, counts
-      ColonySnapshot.java        # full detail: buildings, builders, warehouse
-      BuildingInfo.java          # building id, type, level, position, hut inventory
-      WorkOrderInfo.java         # what is being built/upgraded, target level, progress
-      BuilderInfo.java           # builder name, hut pos, assigned work order id
-      ResourceEntry.java         # itemKey, display name, needed, available(hut),
-                                 #   availableWarehouse, deliverable flag, nbt hash
-      ItemRef.java               # registry name + optional nbt hash -> texture key
-
-  texture/
-    TextureService.java          # itemKey/stack -> PNG bytes (cache in memory + disk)
-    ModelResolver.java           # read models/item + models/block JSON from classpath/jars
-    VanillaAssetProvider.java    # download+cache vanilla client jar assets on first run
-    DomumOrnamentumResolver.java # resolve DO material components -> texture key
-    PngCache.java                # keyed cache -> byte[]; disk-backed under run/colonyweb-cache
-
-  command/
-    ColonyWebCommand.java        # /colonyweb -> prints dashboard URL, status, port
-
-src/main/resources/
-  META-INF/mods.toml             # (done)
-  pack.mcmeta                    # (done)
-  webroot/
-    index.html                   # dashboard shell + colony selector
-    app.js                       # fetch /api, subscribe to /events (SSE), render cards
-    style.css                    # layout & theming
+src/main/resources/webroot/
+  index.html            app shell (sidebar, topbar, partial slots)
+  partials/*.html       one file per tab, plus the two modals and the sign-in screen
+  js/*.js               ES modules: boot, dashboard, api, format, one per tab
+  style.css             generated by Tailwind
+  vendor/alpine.min.js
 ```
+
+Rules that keep it that way:
+
+- **One concern per file.** A scanner reads one part of the colony; a JS module backs one tab.
+- `ColonyDataProvider` orchestrates a scan and owns no scanning logic itself.
+- Everything MineColonies-shaped goes through `MineColoniesReflect` and fails soft.
+- The front-end mirrors the same split: `partials/<tab>.html` ↔ `js/<tab>.js`.
 
 ---
 
@@ -173,12 +160,17 @@ src/main/resources/
 
 ## 7. HTTP Endpoints
 
+The full table (including the `/auth/*` routes and the per-section colony endpoints) is in
+**README.md → HTTP API & Endpoints**. The core shape:
+
 | Method | Path | Purpose |
 |--------|------|---------|
 | GET | `/` | `index.html` |
-| GET | `/app.js`, `/style.css` | static assets |
-| GET | `/api/colonies` | colony list for the selector |
+| GET | `/style.css`, `/js/*`, `/partials/*` | static assets |
+| GET/POST | `/auth/me`, `/auth/login`, `/auth/logout` | pairing-code sign-in |
+| GET | `/api/colonies` | colonies the signed-in player may see |
 | GET | `/api/colony/{id}` | full snapshot for one colony |
+| GET | `/api/colony/{id}/{citizens\|research\|combat}` | the heavier sections, fetched per tab |
 | GET | `/events` | **SSE** stream; emits `colonies` and `colony:{id}` change events |
 | GET | `/textures/{key}.png` | PNG icon for an item/block/DO stack |
 
@@ -244,7 +236,7 @@ Goal: given an `itemKey` (and optionally the originating `ItemStack`/NBT), retur
    material block (e.g. `minecraft:oak_planks`) and use that block's texture PNG instead
    of the plain DO block texture. Include the material in the `itemKey` hash so each
    variant caches separately.
-5. **Cache** results in `PngCache` (memory + `run/colonyweb-cache/textures/`).
+5. **Cache** results in `PngCache` (memory + `run/colonyweb/textures/`).
 6. If nothing resolves, return a generated **placeholder** PNG (e.g. magenta/black
    checker) so the UI still lays out.
 
@@ -253,7 +245,7 @@ Goal: given an `itemKey` (and optionally the originating `ItemStack`/NBT), retur
   1. Fetch Mojang version manifest:
      `https://launchermeta.mojang.com/mc/game/version_manifest_v2.json`.
   2. Find entry for `1.20.1` → fetch its version JSON → `downloads.client.url`.
-  3. Download `client.jar` to `run/colonyweb-cache/`.
+  3. Download `client.jar` to `run/colonyweb/`.
   4. Lazily extract `assets/minecraft/textures/**` entries on demand (or all up front).
 - Cache so it only downloads once. Respect a config flag and fail soft (log + placeholder)
   if offline.
@@ -262,26 +254,37 @@ Goal: given an `itemKey` (and optionally the originating `ItemStack`/NBT), retur
 
 ## 10. Web UI (`webroot/`)
 
-- **index.html**: header with a **colony `<select>`** dropdown, a connection/live status
-  dot, and a container for building cards.
-- **app.js**:
-  - On load: `GET /api/colonies`, populate the selector, select first (or from URL hash).
-  - `GET /api/colony/{id}` and render:
-    - A **"Builders" panel**: each builder → which building + level they're upgrading,
-      with a progress bar.
-    - A **grid of building cards**: title (name + level → target), a "being built by X"
-      badge, and a resource table with columns: **icon**, item name, **needed**,
-      **in hut**, **in warehouse**, status (enough / deliverable / missing) color-coded.
-    - A **warehouse panel** summarizing available stock.
-  - Icons: `<img src="/textures/{encodeURIComponent(itemKey)}.png">` with lazy loading.
-  - Open an `EventSource('/events')`; on `update` re-fetch `/api/colonies` and the current
-    `/api/colony/{id}`. Show a reconnecting status indicator.
-- **style.css**: responsive card grid, resource table styling, status colors
-  (green = satisfied, amber = deliverable from warehouse, red = missing), dark theme.
+- **No bundler.** Alpine.js is vendored, the modules are plain ES modules, and the stylesheet
+  is generated by the standalone Tailwind binary. Nothing needs `npm` to run.
+- **`index.html`** is only the shell: sidebar nav, topbar (colony selector, live indicator,
+  refresh, sign out) and one `<div data-partial="x">` per tab and modal.
+- **`js/boot.js`** fetches each `/partials/x.html`, replaces the placeholder, and *only then*
+  appends the Alpine script — Alpine walks the DOM once at startup, so the markup has to be in
+  place first.
+- **`js/dashboard.js`** composes the per-tab mixins with `Object.defineProperties` (a spread
+  would evaluate their getters once and freeze the value), and owns colony selection, tab
+  routing via the URL hash, lazy section loading and the `EventSource('/events')` subscription.
+- **`js/<tab>.js`** holds one tab's filters, derived lists and modal state. `format.js` is pure
+  presentation helpers; `api.js` is every server call plus the `Unauthorized` error that bounces
+  the viewer back to the sign-in screen.
+- **The design system lives in `tailwind.input.css`'s component layer** (`.panel`, `.card`,
+  `.tile`, `.meter`, `.mc-tip`, …) so the partials read as structure, not as utility soup.
+- Status colours are consistent everywhere: green = satisfied, amber = deliverable from the
+  warehouse, red = missing.
+- Item lists (warehouse, build requirements, citizen inventories) are rendered as **Minecraft
+  tooltips**, material lines and all.
+
+**Gotchas worth remembering:**
+
+- Inside `<svg>`, `<template x-for>` is parsed as an SVG element, not a real template, and
+  `:viewBox` is lowercased to `:viewbox`. The map tab therefore builds marker markup as a string
+  (`x-html`) and sets `viewBox` imperatively via `x-effect`.
+- Key `x-for` over item lists **by index**, not by `itemKey` — two stacks can collapse to the
+  same key, and duplicate keys break Alpine's reconciliation outright.
 
 ---
 
-## 11. Config (`Config.java` — done)
+## 11. Config (`Config.java`)
 
 | Key | Default | Meaning |
 |-----|---------|---------|
@@ -290,19 +293,44 @@ Goal: given an `itemKey` (and optionally the originating `ItemStack`/NBT), retur
 | `refreshIntervalSeconds` | 3 | Re-scan + SSE push cadence |
 | `autoDownloadVanillaAssets` | true | Download vanilla client textures on first run |
 | `publicHost` | "" | Host shown in `/colonyweb` link (blank = auto-detect) |
+| `authEnabled` | true | Require a pairing-code sign-in |
+| `sessionDays` | 30 | How long a browser stays signed in |
+| `loginCodeMinutes` | 10 | How long a pairing code stays valid |
 
 ---
 
-## 12. Command
+## 12. Commands
 
-`/colonyweb` (permission level 0, any player or console):
-- Prints the dashboard URL: `http://<publicHost-or-detected-ip>:<httpPort>/`.
-- Sub-actions (optional): `/colonyweb status` (running? clients connected? MineColonies
-  detected?), `/colonyweb port`.
+`/colonyweb` — link, `port` and `sync` are open to anyone; `status`, `sync <player>`,
+`access grant|revoke|list` and `logout <player>` require op (permission level 2). The Brigadier
+tree lives in `ColonyWebCommand`; the bodies in `AccessCommands`. Full table in the README.
+
+Design notes:
+
+- Codes use a 28-character alphabet with no vowels or look-alikes (`0/O`, `1/I`), formatted
+  `XXXX-XXXX`. Input is normalised (dashes and spaces stripped, upper-cased) so typing is
+  forgiving.
+- `sync` runs on the server thread, because that is where colony membership has to be read.
+- An operator syncing someone else gets the code in their own chat **and** whispers it to the
+  target when they're online, so it isn't read off a shared screen.
 
 ---
 
-## 13. Lifecycle Wiring (`Untitled1.java`)
+## 12b. Auth Model
+
+- `/colonyweb sync` mirrors the player's colonies into `WebUser.colonies` (replaced wholesale
+  on every sync) and issues a single-use code held **in memory only**.
+- Redeeming a code mints a random 32-byte token, sets it as an `HttpOnly; SameSite=Lax` cookie,
+  and stores only its **SHA-256 hash** in `auth.json`.
+- `WebUser.granted` holds explicit operator grants; these survive re-syncs, unlike `colonies`.
+- `canAccess` = admin, or the colony is in `colonies ∪ granted`.
+- Per-colony routes answer an identical `403` for "not yours" and "doesn't exist", so the API
+  can't enumerate colonies.
+- Expired sessions are purged by the refresh scheduler's housekeeping pass.
+
+---
+
+## 13. Lifecycle Wiring (`ColonyWeb.java`)
 
 - Constructor: register `Config.SPEC`, register mod-bus + forge-bus listeners.
 - `ServerStartingEvent`: init `VanillaAssetProvider` (async download), start `WebServer`,
@@ -334,8 +362,14 @@ Goal: given an `itemKey` (and optionally the originating `ItemStack`/NBT), retur
 Then open `http://localhost:8723/` (or the configured port). Use `/colonyweb` in-game to
 get the link.
 
-Production: build the jar (`build/libs/untitled1-1.0-SNAPSHOT.jar`), place it in the
+Production: build the jar (`build/libs/colonyweb-2.0.0.jar`), place it in the
 server's `mods/` folder alongside MineColonies + Domum Ornamentum.
+
+After editing any partial, JS module or `tailwind.input.css`, regenerate the stylesheet:
+
+```powershell
+./tailwindcss.exe -c tailwind.config.js -i tailwind.input.css -o src/main/resources/webroot/style.css --minify
+```
 
 ---
 
@@ -345,18 +379,52 @@ server's `mods/` folder alongside MineColonies + Domum Ornamentum.
 - [x] `gradle.properties` metadata + version placeholders
 - [x] `mods.toml` server side + optional deps
 - [x] `Config.java` rewritten
-- [ ] `Untitled1.java` — lifecycle wiring, MineColonies detection, scheduler
-- [ ] `web/WebServer.java` + `web/SseBroadcaster.java` + `web/JsonUtil.java`
-- [ ] `web/handlers/*` — Api, Events (SSE), Texture, Static
-- [ ] `colony/model/*` DTOs
-- [ ] `colony/MineColoniesReflect.java` + `colony/ColonyDataProvider.java`
-- [ ] `texture/VanillaAssetProvider.java`
-- [ ] `texture/ModelResolver.java` + `texture/TextureService.java` + `texture/PngCache.java`
-- [ ] `texture/DomumOrnamentumResolver.java`
-- [ ] `command/ColonyWebCommand.java`
-- [ ] `webroot/index.html` + `app.js` + `style.css`
-- [ ] Change-detection hashing for SSE
-- [ ] Manual test with a real colony (builder upgrading a hut, warehouse stocked)
+- [x] Mod entry class — lifecycle wiring, MineColonies detection, scheduler
+- [x] `web/WebServer.java` + `web/SseBroadcaster.java` + `web/JsonUtil.java`
+- [x] `web/handlers/*` — Api, Events (SSE), Texture, Static
+- [x] `colony/model/*` DTOs
+- [x] `colony/MineColoniesReflect.java` + `colony/ColonyDataProvider.java`
+- [x] `texture/VanillaAssetProvider.java`
+- [x] `texture/ModelResolver.java` + `texture/TextureService.java` + `texture/PngCache.java`
+- [x] `texture/DomumOrnamentumResolver.java`
+- [x] `command/ColonyWebCommand.java`
+- [x] `webroot/` front-end + generated `style.css`
+- [x] Change-detection hashing for SSE
+- [x] Manual test with a real colony (builder upgrading a hut, warehouse stocked)
+
+### v2 — tabs, deeper MineColonies integration, 3D Domum icons
+
+- [x] `colony/CitizenScanner.java` — citizens: job, 11 skills, happiness modifiers, inventory
+- [x] `colony/ResearchScanner.java` — branches, per-research state/progress/effects/cost
+- [x] `colony/CombatScanner.java` — raid pressure, guard roster, guard posts, colony events
+- [x] `colony/Scan.java` + `util/Text.java` — shared coercion / naming helpers
+- [x] `MineColoniesReflect#invokeAny` — signature-agnostic calls (MineColonies moves params
+      between versions)
+- [x] DTOs: `ColonyStats`, `CitizenInfo`, `ResearchInfo`, `CombatInfo`, `ItemInfo`,
+      `ItemCount`, `MaterialComponent`
+- [x] Endpoints: `/citizens`, `/citizen/{id}`, `/research`, `/combat` (kept out of the snapshot
+      so the live-updated document stays small)
+- [x] `texture/BlockModel.java` + `ModelResolver#resolveModel` — parse model geometry
+- [x] `texture/IsometricRenderer.java` — z-buffered software rasterizer for 3D block icons
+- [x] Front-end: seven tabs, citizen detail modal, Minecraft-tooltip item lists, colony map
+- [x] Tailwind component layer for tabs, stat tiles, meters and MC tooltips
+
+### v2.0.0 — rename to ColonyWeb, accounts, and the code split
+
+- [x] Rename: package `…plugins.colonyweb`, mod id `colonyweb`, `ColonyWeb.java`, version 2.0.0
+- [x] `auth/` — `AuthService` (codes, sessions, grants), `AuthStore`, `WebUser`,
+      `StoredSession`, `SessionCookie`
+- [x] `web/handlers/AuthHandler.java` + `RequestAuth.java`; API/events/textures behind a session
+- [x] `/api/colonies` filtered per player; per-colony routes 403 identically for
+      "not yours" and "doesn't exist"
+- [x] Commands: `sync`, `sync <player>`, `access grant|revoke|list`, `logout <player>`
+- [x] Split `ColonyDataProvider` → `ColonyLookup`, `BuildingScanner`, `WorkOrderScanner`,
+      `WarehouseScanner`, `StatsBuilder`, `ScanContext`, `ColonyScan`
+- [x] New `service/` package: `ColonyRefreshScheduler` + `ScanHasher`
+- [x] Front-end split into ES modules + HTML partials; `boot.js` loads partials before Alpine
+- [x] Design pass: sidebar shell, new dark palette, semantic component layer, sign-in screen
+- [x] Verified every tab, both modals, the sign-in screen and the narrow layout against a mock
+      server (headless Chrome, zero console errors)
 
 ---
 
@@ -372,7 +440,11 @@ server's `mods/` folder alongside MineColonies + Domum Ornamentum.
 - **Thread-safety**: HTTP handlers run off-thread; never touch the server world directly
   from a handler. Snapshots are built on the server thread (or a synchronized scan) and
   handed to handlers as immutable DTOs.
-- **Security**: `bindAddress`/port expose data on the network. Document that it's an
-  unauthenticated read-only dashboard; recommend firewalling or `127.0.0.1` + reverse
-  proxy for public servers.
+- **Security**: the dashboard is read-only, and with `authEnabled` (the default) every data
+  route needs a session obtained from an in-game pairing code. Traffic is still plain HTTP, so
+  on an untrusted network put it behind a TLS-terminating reverse proxy — a session cookie sent
+  in the clear can be captured. With `authEnabled = false` it is fully public to anyone who can
+  reach the port.
+- **Never persist a secret**: pairing codes stay in memory, and only SHA-256 hashes of session
+  tokens reach `auth.json`.
 

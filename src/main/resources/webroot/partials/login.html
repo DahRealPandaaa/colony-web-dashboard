@@ -1,0 +1,44 @@
+<!-- Sign-in: pairing codes come from /colonyweb sync in-game, so there is nothing to remember. -->
+<div class="login-wrap" x-show="authReady && !signedIn">
+    <div class="login-card">
+        <div class="flex items-center gap-3 mb-6">
+            <span class="brand-mark">
+                <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor"
+                     stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M3 21h18"/><path d="M5 21V8l7-5 7 5v13"/><path d="M9 21v-6h6v6"/>
+                </svg>
+            </span>
+            <span>
+                <span class="brand-name block">ColonyWeb</span>
+                <span class="brand-sub block">MineColonies dashboard</span>
+            </span>
+        </div>
+
+        <h1 class="text-[19px] font-bold tracking-tight">Sign in with a pairing code</h1>
+        <p class="text-[13px] text-slate-400 mt-1.5 leading-relaxed">
+            Run <span class="kbd">/colonyweb sync</span> in-game and type the code it gives you.
+            It is valid once, and only for the colonies you belong to.
+        </p>
+
+        <form class="mt-6" @submit.prevent="submitLogin()">
+            <label class="tile-label block mb-2" for="login-code">Pairing code</label>
+            <input id="login-code" class="code-input" type="text" inputmode="latin" autocomplete="off"
+                   spellcheck="false" placeholder="XXXX-XXXX" maxlength="9"
+                   x-model="loginCode" @input="formatCode()" x-ref="code"
+                   x-init="$nextTick(() => $refs.code.focus())">
+
+            <p class="text-[12.5px] text-rose-300 mt-2.5 min-h-[1.1rem]" x-text="loginError"></p>
+
+            <button type="submit" class="btn btn-primary w-full mt-3"
+                    :disabled="loggingIn || loginCode.replace('-', '').length < 8">
+                <span x-show="!loggingIn">Open the dashboard</span>
+                <span x-show="loggingIn">Checking…</span>
+            </button>
+        </form>
+
+        <p class="text-[11.5px] text-slate-600 mt-6 leading-relaxed">
+            Operators can pair someone else with <span class="kbd">/colonyweb sync &lt;player&gt;</span>,
+            and grant extra colonies with <span class="kbd">/colonyweb access grant</span>.
+        </p>
+    </div>
+</div>

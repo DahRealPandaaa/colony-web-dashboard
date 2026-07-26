@@ -1,0 +1,87 @@
+<template x-if="tab === 'citizens'">
+    <div class="animate-fade-up">
+        <div class="toolbar">
+            <div class="searchbox flex-1 min-w-[200px]">
+                <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2">
+                    <circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/>
+                </svg>
+                <input type="search" placeholder="Search citizens, jobs or buildings…" x-model="citizenSearch">
+            </div>
+            <select class="field py-1.5" x-model="citizenJob" aria-label="Filter by job">
+                <option value="">All jobs</option>
+                <template x-for="j in citizenJobs" :key="j">
+                    <option :value="j" x-text="j"></option>
+                </template>
+            </select>
+            <select class="field py-1.5" x-model="citizenSort" aria-label="Sort citizens">
+                <option value="job">Job</option>
+                <option value="name">Name</option>
+                <option value="skills">Total skill</option>
+                <option value="happiness">Happiness</option>
+                <option value="health">Lowest health</option>
+            </select>
+            <span class="chip on ml-auto" x-text="visibleCitizens.length + ' shown'"></span>
+        </div>
+
+        <div class="grid grid-auto-wide gap-3.5">
+            <template x-for="c in visibleCitizens" :key="c.id">
+                <article class="card card-click" tabindex="0"
+                         @click="openCitizen(c)" @keydown.enter="openCitizen(c)">
+                    <div class="flex items-start gap-3">
+                        <img class="w-10 h-10 pixelated rounded-lg bg-black/25 border border-line p-1 shrink-0"
+                             loading="lazy" :src="citizenIcon(c)" :alt="c.job">
+                        <div class="flex-1 min-w-0">
+                            <div class="flex items-center gap-2">
+                                <span class="font-bold text-[14.5px] truncate" x-text="c.name"></span>
+                                <span class="ba b-repair" x-show="c.child">Child</span>
+                                <span class="w-1.5 h-1.5 rounded-full shrink-0 ml-auto"
+                                      :class="c.spawned ? 'bg-emerald-400' : 'bg-ink-700'"
+                                      :title="c.spawned ? 'Loaded in the world' : 'Not loaded'"></span>
+                            </div>
+                            <div class="text-[12.5px] text-accent-soft font-semibold truncate" x-text="c.job"></div>
+                            <div class="text-[11.5px] text-slate-600 truncate" x-text="c.workBuilding || 'No workplace'"></div>
+                        </div>
+                    </div>
+
+                    <div class="mt-3 space-y-2">
+                        <div>
+                            <div class="flex justify-between text-[11px] text-slate-500 mb-1">
+                                <span>Health</span>
+                                <span class="tabular-nums" x-text="c.health.toFixed(0) + ' / ' + c.maxHealth.toFixed(0)"></span>
+                            </div>
+                            <div class="meter hp"><span :style="'width:' + pct(c.health, c.maxHealth) + '%'"></span></div>
+                        </div>
+                        <div>
+                            <div class="flex justify-between text-[11px] text-slate-500 mb-1">
+                                <span>Saturation</span><span class="tabular-nums" x-text="c.saturation.toFixed(1)"></span>
+                            </div>
+                            <div class="meter food"><span :style="'width:' + pct(c.saturation, 20) + '%'"></span></div>
+                        </div>
+                        <div>
+                            <div class="flex justify-between text-[11px] text-slate-500 mb-1">
+                                <span>Happiness</span><span class="tabular-nums" x-text="c.happiness.toFixed(1)"></span>
+                            </div>
+                            <div class="meter happy"><span :style="'width:' + pct(c.happiness, 10) + '%'"></span></div>
+                        </div>
+                    </div>
+
+                    <div class="flex items-center gap-1.5 mt-3 flex-wrap">
+                        <template x-for="s in topSkills(c)" :key="s.name">
+                            <span class="chip !py-0.5" :class="s.role ? 'on' : ''">
+                                <span x-text="s.name"></span><b class="tabular-nums" x-text="s.level"></b>
+                            </span>
+                        </template>
+                        <span class="ml-auto text-[11px] text-slate-600 tabular-nums"
+                              x-text="c.inventoryUsed + '/' + c.inventorySize"></span>
+                    </div>
+                </article>
+            </template>
+        </div>
+
+        <div class="empty" x-show="!visibleCitizens.length">
+            <p class="empty-title" x-show="citizens.length">No citizens match your filters.</p>
+            <p class="empty-title" x-show="!citizens.length && loaded.citizens">This colony has no citizens.</p>
+            <p class="empty-title" x-show="!loaded.citizens">Loading citizens…</p>
+        </div>
+    </div>
+</template>

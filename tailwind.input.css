@@ -2,28 +2,115 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ==========================================================================
+   ColonyWeb design system.
+
+   Markup in the HTML partials sticks to these semantic classes wherever it can,
+   so each tab reads as structure rather than as a wall of utilities, and the
+   look stays consistent when a new tab is added.
+   ========================================================================== */
+
+@layer base {
+    body {
+        background-image:
+            radial-gradient(900px 420px at 12% -10%, rgba(56, 189, 248, 0.08), transparent 60%),
+            radial-gradient(760px 380px at 92% 0%, rgba(37, 99, 235, 0.07), transparent 62%);
+        background-attachment: fixed;
+    }
+}
+
 @layer components {
-    /* Action badges */
-    .ba { @apply inline-block text-[10px] font-extrabold tracking-wide px-2 py-[3px] rounded-md uppercase; }
-    .b-upgrade { @apply bg-blue-500/15 text-blue-300 border border-blue-500/40; }
-    .b-build   { @apply bg-sky-500/15 text-sky-300 border border-sky-500/40; }
-    .b-repair  { @apply bg-amber-500/15 text-amber-300 border border-amber-500/40; }
-    .b-remove  { @apply bg-rose-500/15 text-rose-300 border border-rose-500/40; }
 
-    /* Progress */
-    .progress { @apply h-2 rounded-full bg-white/5 overflow-hidden mt-1.5; }
-    .progress > span { @apply block h-full rounded-full bg-gradient-to-r from-blue-500 to-sky-400 transition-[width] duration-500; }
-    .progress.big { @apply h-3; }
+    /* ---------- App shell ---------- */
+    .shell       { @apply h-full grid grid-cols-1 lg:grid-cols-[236px_1fr] bg-ink-950 text-slate-100; }
+    .sidebar     { @apply hidden lg:flex flex-col gap-1 border-r border-line bg-ink-900/70 backdrop-blur px-3 py-4; }
+    .brand       { @apply flex items-center gap-2.5 px-2 pb-4 mb-2 border-b border-line; }
+    .brand-mark  { @apply w-9 h-9 grid place-items-center rounded-xl text-ink-950
+                          bg-gradient-to-br from-accent-soft to-accent-deep shadow-glow shrink-0; }
+    .brand-name  { @apply text-[15px] font-bold tracking-tight leading-none; }
+    .brand-sub   { @apply text-[10.5px] uppercase tracking-[0.14em] text-slate-500 leading-none mt-1; }
 
-    /* Status pills */
-    .pill { @apply inline-block text-[11.5px] font-bold px-3 py-1 rounded-full; }
-    .pill.ok      { @apply bg-emerald-500/15 text-emerald-300 border border-emerald-500/40; }
-    .pill.deliver { @apply bg-amber-500/15 text-amber-300 border border-amber-500/40; }
-    .pill.missing { @apply bg-rose-500/15 text-rose-300 border border-rose-500/40; }
+    .nav-item    { @apply relative flex items-center gap-3 rounded-xl px-3 py-2 text-[13.5px] font-medium
+                          text-slate-400 cursor-pointer select-none transition
+                          hover:text-slate-100 hover:bg-white/[0.04]; }
+    .nav-item.on { @apply text-white bg-white/[0.07]; }
+    .nav-item.on::before {
+        content: "";
+        @apply absolute left-0 top-1.5 bottom-1.5 w-[3px] rounded-full bg-gradient-to-b from-accent-soft to-accent-deep;
+    }
+    .nav-icon    { @apply w-[18px] h-[18px] shrink-0; }
+    .nav-count   { @apply ml-auto text-[11px] font-semibold tabular-nums text-slate-500; }
+    .nav-item.on .nav-count { @apply text-accent-soft; }
 
-    /* Status dots */
-    .sdot { @apply inline-flex items-center gap-1.5 text-[11px] font-bold tabular-nums; }
-    .sdot i { @apply w-2.5 h-2.5 rounded-full inline-block; }
+    /* Mobile tab strip, shown when the sidebar is hidden. */
+    .tabstrip    { @apply lg:hidden flex items-center gap-1 overflow-x-auto border-b border-line px-3 py-2 bg-ink-900/70; }
+    .tabchip     { @apply px-3 py-1.5 rounded-lg text-[13px] font-semibold text-slate-400 whitespace-nowrap
+                          hover:text-slate-100 hover:bg-white/[0.05] cursor-pointer; }
+    .tabchip.on  { @apply text-white bg-white/[0.08]; }
+
+    .topbar      { @apply h-14 shrink-0 flex items-center gap-3 px-4 lg:px-6 border-b border-line bg-ink-900/40 backdrop-blur; }
+    .page-title  { @apply text-[15px] font-semibold tracking-tight; }
+    .page-sub    { @apply text-[12px] text-slate-500; }
+    .content     { @apply flex-1 min-h-0 overflow-y-auto p-4 lg:p-6; }
+
+    /* ---------- Surfaces ---------- */
+    .panel       { @apply rounded-2xl border border-line bg-ink-900/60 shadow-panel; }
+    .panel-head  { @apply flex items-start justify-between gap-3 px-4 pt-4 pb-3; }
+    .panel-title { @apply text-[14px] font-semibold tracking-tight; }
+    .panel-sub   { @apply text-[11.5px] text-slate-500; }
+    .panel-body  { @apply px-4 pb-4; }
+
+    .card        { @apply rounded-xl border border-line bg-ink-850/80 p-4 transition; }
+    .card-click  { @apply cursor-pointer hover:-translate-y-0.5 hover:border-line-strong hover:bg-ink-800
+                          hover:shadow-lift focus:outline-none focus-visible:ring-2 focus-visible:ring-accent/50; }
+    .card-active { @apply border-accent/40 bg-accent/[0.06]; }
+
+    /* ---------- Stat tiles ---------- */
+    .tile        { @apply rounded-xl border border-line bg-ink-850/70 px-4 py-3.5; }
+    .tile-label  { @apply text-[10.5px] uppercase tracking-[0.12em] text-slate-500 font-semibold; }
+    .tile-value  { @apply text-[26px] leading-none font-bold tabular-nums mt-2 tracking-tight; }
+    .tile-sub    { @apply text-[11.5px] text-slate-500 mt-1.5; }
+
+    /* ---------- Meters & progress ---------- */
+    .progress            { @apply h-1.5 rounded-full bg-white/[0.06] overflow-hidden mt-2; }
+    .progress > span     { @apply block h-full rounded-full bg-gradient-to-r from-accent-deep to-accent
+                                  transition-[width] duration-500; }
+    .progress.big        { @apply h-2.5; }
+
+    .meter               { @apply h-1.5 rounded-full bg-white/[0.06] overflow-hidden; }
+    .meter > span        { @apply block h-full rounded-full transition-[width] duration-500; }
+    .meter.hp > span     { @apply bg-gradient-to-r from-rose-600 to-rose-400; }
+    .meter.food > span   { @apply bg-gradient-to-r from-amber-600 to-amber-400; }
+    .meter.happy > span  { @apply bg-gradient-to-r from-emerald-600 to-emerald-400; }
+    .meter.xp > span     { @apply bg-gradient-to-r from-violet-600 to-fuchsia-400; }
+    .meter.done > span   { @apply bg-gradient-to-r from-emerald-600 to-emerald-400; }
+
+    /* ---------- Badges, pills, chips ---------- */
+    .ba          { @apply inline-block text-[9.5px] font-extrabold tracking-[0.08em] px-2 py-[3px] rounded-md uppercase; }
+    .b-upgrade   { @apply bg-accent/15 text-accent-soft border border-accent/40; }
+    .b-build     { @apply bg-sky-500/15 text-sky-300 border border-sky-500/40; }
+    .b-repair    { @apply bg-amber-500/15 text-amber-300 border border-amber-500/40; }
+    .b-remove    { @apply bg-rose-500/15 text-rose-300 border border-rose-500/40; }
+
+    .pill            { @apply inline-block text-[11px] font-bold px-2.5 py-1 rounded-full whitespace-nowrap; }
+    .pill.ok         { @apply bg-emerald-500/15 text-emerald-300 border border-emerald-500/40; }
+    .pill.deliver    { @apply bg-amber-500/15 text-amber-300 border border-amber-500/40; }
+    .pill.missing    { @apply bg-rose-500/15 text-rose-300 border border-rose-500/40; }
+
+    .state              { @apply inline-block text-[9.5px] font-extrabold tracking-[0.08em] px-2 py-[3px] rounded uppercase; }
+    .state.completed    { @apply bg-emerald-500/15 text-emerald-300 border border-emerald-500/40; }
+    .state.in-progress  { @apply bg-accent/15 text-accent-soft border border-accent/40; }
+    .state.not-started  { @apply bg-white/[0.05] text-slate-500 border border-line-strong; }
+
+    .chip        { @apply inline-flex items-center gap-1.5 text-[11.5px] font-semibold rounded-full px-2.5 py-1
+                          bg-white/[0.05] border border-line text-slate-300; }
+    .chip.on     { @apply bg-accent/15 border-accent/40 text-accent-soft; }
+    .chip.good   { @apply bg-emerald-500/10 border-emerald-500/40 text-emerald-300; }
+    .chip.bad    { @apply bg-rose-500/10 border-rose-500/40 text-rose-300; }
+    .chip-btn    { @apply cursor-pointer transition hover:border-line-strong hover:text-slate-100; }
+
+    .sdot        { @apply inline-flex items-center gap-1.5 text-[11px] font-bold tabular-nums; }
+    .sdot i      { @apply w-2 h-2 rounded-full inline-block; }
     .sdot.ok i      { @apply bg-emerald-400; }
     .sdot.deliver i { @apply bg-amber-400; }
     .sdot.missing i { @apply bg-rose-500; }
@@ -31,30 +118,79 @@
     .sdot.deliver b { @apply text-amber-300; }
     .sdot.missing b { @apply text-rose-300; }
 
-    /* Resource table rows */
-    .row-ok      { @apply bg-emerald-500/[0.04]; }
-    .row-deliver { @apply bg-amber-500/[0.04]; }
-    .row-missing { @apply bg-rose-500/[0.05]; }
+    /* ---------- Forms ---------- */
+    .field       { @apply bg-ink-950/80 border border-line rounded-lg text-slate-100 text-[13px] px-3 py-2 outline-none
+                          transition focus:border-accent/60 focus:ring-2 focus:ring-accent/20; }
+    .searchbox   { @apply flex items-center gap-2 bg-ink-950/80 border border-line rounded-lg px-3 text-slate-500
+                          transition focus-within:border-accent/60 focus-within:ring-2 focus-within:ring-accent/20; }
+    .searchbox input { @apply flex-1 bg-transparent outline-none py-2 text-[13px] text-slate-100 placeholder:text-slate-600; }
+    .toolbar     { @apply flex items-center gap-3 flex-wrap rounded-2xl border border-line bg-ink-900/60 px-3.5 py-3 mb-4; }
 
-    /* Toggle switch */
-    .switch { @apply inline-flex items-center gap-2 cursor-pointer select-none; }
-    .switch input { @apply hidden; }
-    .switch .track { @apply w-9 h-5 rounded-full bg-slate-700 border border-slate-600 relative transition-colors; }
-    .switch .track::after { content: ""; @apply absolute top-0.5 left-0.5 w-3.5 h-3.5 rounded-full bg-slate-400 transition; }
-    .switch input:checked + .track { @apply bg-blue-500/40 border-blue-500; }
-    .switch input:checked + .track::after { @apply translate-x-4 bg-blue-300; }
-    .switch-label { @apply text-[13px] text-slate-400; }
+    .switch          { @apply inline-flex items-center gap-2 cursor-pointer select-none; }
+    .switch input    { @apply hidden; }
+    .switch .track   { @apply w-9 h-5 rounded-full bg-ink-700 border border-line-strong relative transition-colors; }
+    .switch .track::after { content: ""; @apply absolute top-0.5 left-0.5 w-3.5 h-3.5 rounded-full bg-slate-500 transition; }
+    .switch input:checked + .track { @apply bg-accent/35 border-accent/70; }
+    .switch input:checked + .track::after { @apply translate-x-4 bg-accent-soft; }
+    .switch-label    { @apply text-[12.5px] text-slate-400; }
 
-    /* Inputs */
-    .field { @apply bg-ink-950 border border-slate-700 rounded-lg text-slate-100 text-sm px-3 py-2 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20; }
+    .btn         { @apply inline-flex items-center justify-center gap-2 rounded-lg px-3.5 py-2 text-[13px] font-semibold
+                          transition select-none cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed; }
+    .btn-primary { @apply text-ink-950 bg-gradient-to-br from-accent-soft to-accent-deep hover:brightness-110 shadow-glow; }
+    .btn-ghost   { @apply text-slate-300 border border-line hover:bg-white/[0.05] hover:text-slate-100; }
+    .btn-icon    { @apply w-9 h-9 grid place-items-center rounded-lg border border-line text-slate-400
+                          hover:bg-white/[0.05] hover:text-slate-100 transition cursor-pointer; }
+
+    /* ---------- Modals ---------- */
+    .modal-backdrop { @apply fixed inset-0 z-50 grid place-items-center p-4 bg-ink-950/80 backdrop-blur-sm; }
+    .modal-card     { @apply w-[min(920px,96vw)] max-h-[88vh] overflow-auto rounded-2xl border border-line-strong
+                             bg-ink-900 shadow-lift; }
+    .modal-head     { @apply sticky top-0 z-10 flex items-start justify-between gap-3 px-5 py-4
+                             border-b border-line bg-ink-900/95 backdrop-blur; }
+    .modal-body     { @apply p-5; }
+
+    /* ---------- Empty / loading states ---------- */
+    .empty       { @apply text-slate-500 text-[13px] text-center py-8; }
+    .empty-title { @apply text-slate-400 font-medium; }
+    .skeleton    { @apply rounded-xl bg-white/[0.04] animate-pulse-soft; }
+
+    /* ---------- Minecraft tooltip item entries ---------- */
+    .mc-tip {
+        @apply relative bg-[#0D000F] border border-[#080009] px-3 py-2 font-mono;
+    }
+    .mc-tip::before {
+        content: "";
+        @apply absolute inset-[2px] pointer-events-none border;
+        border-image: linear-gradient(180deg, #5b21f0, #2c0f7a) 1;
+    }
+    .mc-tip.click { @apply cursor-pointer transition hover:bg-[#15021b]; }
+    .mc-name  { @apply text-white text-[13px] leading-tight truncate; }
+    .mc-line  { @apply text-[11.5px] leading-[1.35] text-slate-400 truncate; }
+    .mc-val   { @apply text-slate-200; }
+    .mc-count { @apply text-[13px] font-bold tabular-nums text-[#ffd479] shrink-0; }
+    .mc-icon  { @apply w-8 h-8 shrink-0 bg-black/40 border border-[#2c0f7a] p-0.5; image-rendering: pixelated; }
+    .mc-slot  { @apply text-[10px] text-slate-600 tabular-nums; }
+
+    /* ---------- Sign-in ---------- */
+    .login-wrap  { @apply fixed inset-0 z-[60] grid place-items-center p-5 bg-ink-950; }
+    .login-card  { @apply w-[min(440px,94vw)] rounded-2xl border border-line bg-ink-900 shadow-lift p-7 animate-fade-up; }
+    .code-input  { @apply w-full text-center font-mono text-[26px] tracking-[0.3em] uppercase
+                          bg-ink-950 border border-line rounded-xl py-4 text-white outline-none
+                          transition focus:border-accent/60 focus:ring-2 focus:ring-accent/20
+                          placeholder:text-slate-700 placeholder:tracking-[0.2em]; }
+    .kbd         { @apply font-mono text-[12px] bg-ink-800 border border-line-strong rounded px-1.5 py-0.5 text-accent-soft; }
 }
 
 @layer utilities {
     .pixelated { image-rendering: pixelated; }
+    .grid-auto-cards { grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); }
+    .grid-auto-items { grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); }
+    .grid-auto-wide  { grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); }
 }
 
 [x-cloak] { display: none !important; }
 
-::-webkit-scrollbar { width: 9px; height: 9px; }
-::-webkit-scrollbar-thumb { background: #1e293b; border-radius: 6px; }
-::-webkit-scrollbar-thumb:hover { background: #334155; }
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: #1C2534; border-radius: 8px; border: 2px solid transparent; background-clip: content-box; }
+::-webkit-scrollbar-thumb:hover { background: #2A3547; background-clip: content-box; }
