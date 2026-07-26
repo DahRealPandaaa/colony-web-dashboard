@@ -70,7 +70,13 @@ document.addEventListener("alpine:init", () => {
                 (snap.workOrders || []).forEach((w) => { snap._woById[w.id] = w; });
                 this.snap = snap;
                 if (this.modal) {
-                    this.modal = snap.buildings.find((b) => b.id === this.modal.id) || null;
+                    const updated = snap.buildings.find((b) => b.id === this.modal.id);
+                    if (updated) {
+                        // Preserve the object identity so live updates do not replay the modal transition.
+                        Object.assign(this.modal, updated);
+                    } else {
+                        this.modal = null;
+                    }
                 }
             } catch (e) {
                 console.error(e);
