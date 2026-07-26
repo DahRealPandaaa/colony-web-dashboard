@@ -41,7 +41,7 @@ your university is working on, plus effects and item costs.
 and how well every tower and barracks is staffed.
 
 **Warehouse** — everything stored across the colony in one searchable list, sortable by stock or
-name, filterable to Domum Ornamentum blocks.
+name.
 
 ---
 

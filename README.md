@@ -134,8 +134,7 @@ the game shows for a Domum Ornamentum block:
   require.
 - **"In progress only"** and **"Show decorations"** toggles.
 - **Sort** by: Status (missing first), Progress, Name, or Level.
-- Dedicated **citizen**, **research** and **warehouse** filters (including a *Domum only*
-  toggle on the warehouse tab).
+- Dedicated **citizen**, **research** and **warehouse** filters.
 
 ### Craftable items
 - Anything a colony worker already knows a recipe for is marked with a green **craft badge**
@@ -153,8 +152,7 @@ the game shows for a Domum Ornamentum block:
   - 🔴 **missing** — not available.
 
 ### Warehouse tab
-- Aggregated stock across all colony warehouse(s), searchable, sortable by count or name, and
-  filterable to Domum Ornamentum blocks only.
+- Aggregated stock across all colony warehouse(s), searchable and sortable by count or name.
 - Each entry is a Minecraft-style tooltip card showing the registry id for vanilla/modded items
   and the full material breakdown for Domum blocks.
 
@@ -654,7 +652,7 @@ Requirements: **JDK 17** (Forge 1.20.1 requires it to run the game).
 
 ```powershell
 # from the project root
-./gradlew build           # compiles the mod → build/libs/colonyweb-2.0.0.jar
+./gradlew build           # compiles the mod → build/libs/colonyweb-1.0.0-BETA.jar
 ./gradlew runServer       # dev server (drop MineColonies + Domum Ornamentum jars in run/mods)
 ```
 
@@ -670,7 +668,7 @@ for a sign-in code.
 ## Installing on a Server
 
 1. Build the jar (or grab it from `build/libs/`).
-2. Place `colonyweb-2.0.0.jar` in the server's `mods/` folder, **alongside MineColonies
+2. Place `colonyweb-1.0.0-BETA.jar` in the server's `mods/` folder, **alongside MineColonies
    and Domum Ornamentum**.
 3. Start the server once to generate `config/colonyweb-common.toml`, adjust the port/bind if
    needed, and restart.
