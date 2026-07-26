@@ -127,6 +127,7 @@ jobs:
       - name: Commit and tag version
         env:
           VERSION: ${{ steps.version.outputs.version }}
+        shell: bash
         run: |
           set -euo pipefail
           git config user.name 'github-actions[bot]'
