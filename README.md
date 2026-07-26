@@ -166,17 +166,24 @@ the game shows for a Domum Ornamentum block:
 - **Domum Ornamentum support**: resolves the block's **material components** from stack NBT
   (`BlockEntityTag → textureData`) and shows each one as its own tooltip line ("Supported by:
   Oak Planks", "Main Material: Brick Extra"). Each textured variant caches to its own PNG.
-- **Real 3D icons for Domum Ornamentum blocks.** Rather than showing a flat swatch of one
-  material, the mod parses the block's own model geometry and renders it isometrically with
-  the vanilla GUI transform (`[30, 225, 0]`), substituting each material's texture into the
-  model's texture variables — so a *Brick Extra Shingle* looks like a shingle made of brick,
-  and a stair looks like a stair. Rendering is a self-contained software rasterizer
-  (z-buffered, nearest-neighbour sampled, vanilla face shading, cut-out geometry preserved) —
-  no client, no OpenGL. If a model cannot be parsed it falls back to the flat material
-  texture, and then to the plain item texture.
+- **The icon players actually see in their inventory.** A block's inventory icon is its *model*
+  drawn in 3D, not one of its face textures — so the mod parses the model's geometry and
+  renders it isometrically under the vanilla GUI transform (`[30, 225, 0]`). Oak stairs look
+  like stairs, a furnace shows its front, a fence shows its inventory post. The item model
+  decides, exactly as it does in game: items whose model is a flat sprite (wheat, sticks,
+  doors, torches) keep that sprite, because that is equally what the inventory shows.
+  Rendering is a self-contained software rasterizer (z-buffered, nearest-neighbour sampled,
+  vanilla face shading, cut-out geometry preserved) — no client, no OpenGL.
+- Faces with a `tintindex` (grass, leaves) are coloured with the temperate grass/foliage green;
+  their textures ship greyscale and would otherwise render bone white.
+- **Domum Ornamentum blocks** go one step further: each material component's texture is
+  substituted into the model's texture variables first, so a *Brick Extra Shingle* looks like a
+  shingle made of brick rather than a flat brick square. If a model cannot be parsed it falls
+  back to the flat material texture, and then to the plain item texture.
 - Animated textures are cropped to their first frame; unresolved icons fall back to a generated
   magenta/black placeholder so the UI always lays out.
-- **Two-tier cache** (in-memory + disk under `<server>/colonyweb/`).
+- **Two-tier cache** (in-memory + disk under `<server>/colonyweb/`), stamped with a renderer
+  version so an upgrade that changes how icons look discards its own stale PNGs on first start.
 
 ### Reflection-based soft dependency
 - Integrates with MineColonies / Domum Ornamentum **purely through reflection at runtime**.
@@ -325,7 +332,7 @@ src/main/java/DahRealPanda/plugins/colonyweb/
     TextureService.java          # itemKey/stack -> PNG bytes (memory + disk cache)
     ModelResolver.java           # read item/block model JSON + geometry from jars / vanilla
     BlockModel.java              # flattened model: merged textures + cuboid elements
-    IsometricRenderer.java       # software rasterizer -> Minecraft-style 3D block icons
+    IsometricRenderer.java       # software rasterizer -> inventory-style 3D block icons
     VanillaAssetProvider.java    # download + cache vanilla client jar assets
     DomumOrnamentumResolver.java # resolve DO material components -> texture key + tooltip lines
     PngCache.java                # keyed cache -> byte[] (disk-backed)
@@ -702,8 +709,8 @@ for a sign-in code.
 | The code is rejected | Codes are single-use and expire after `loginCodeMinutes`. Run `/colonyweb sync` for a fresh one. Casing and the dash don't matter. |
 | Signed out unexpectedly | The session expired (`sessionDays`), an operator ran `/colonyweb logout`, or `auth.json` was deleted. |
 | Icons show a magenta/black checker | Texture couldn't be resolved (vanilla jar not downloaded, or a modded texture path differs). Vanilla icons require `autoDownloadVanillaAssets = true` and internet on first run. |
-| Domum Ornamentum icons are still flat after upgrading | Icons are cached on disk. Delete `<server>/colonyweb/textures/` and restart so they re-render in 3D. |
-| A Domum block renders as a flat swatch | Its model had no parseable geometry (e.g. a runtime-generated model), so the mod fell back to the material texture. Everything else still works. |
+| Icons are still flat after upgrading | Cached PNGs are discarded automatically when the renderer changes, on the first start after the upgrade. If they persist, delete `<server>/colonyweb/textures/` and restart. |
+| A block renders as a flat swatch | Its model had no parseable geometry (e.g. a runtime-generated model, or a `builtin/entity` one like chests and beds), so the mod fell back to a texture. Everything else still works. |
 | `/colonyweb` link not clickable | Fixed — the link is a proper `OPEN_URL` chat component. |
 
 The dashboard logs a line per scan so issues are visible without debug logging:

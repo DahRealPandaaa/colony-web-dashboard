@@ -23,6 +23,16 @@ public final class IsometricRenderer {
     private static final double SHADE_NS = 0.8;
     private static final double SHADE_EW = 0.6;
 
+    /**
+     * Colour applied to faces that declare a {@code tintindex}.
+     *
+     * <p>In game the tint comes from the biome the block is standing in, which a texture cache
+     * has no notion of; vanilla's own inventory slots face the same problem and use a fixed
+     * colour. This is the temperate grass/foliage green, so grass blocks and leaves read as
+     * green instead of the bone white their greyscale textures would otherwise give.</p>
+     */
+    private static final int DEFAULT_TINT = 0x91BD59;
+
     private static final double GUI_PITCH_DEGREES = 30;
 
     /**
@@ -94,7 +104,7 @@ public final class IsometricRenderer {
         if (uv == null) {
             return false;
         }
-        double shade = shadeFor(direction);
+        double[] shade = shadeFor(direction, face.tintIndex);
 
         // Quad corners at parametric (s,t) = (0,0) (1,0) (1,1) (0,1) across the face.
         double[][] pos = new double[4][];
@@ -155,12 +165,21 @@ public final class IsometricRenderer {
         };
     }
 
-    private static double shadeFor(String direction) {
-        return switch (direction) {
+    /** Per-channel multiplier for a face: vanilla's directional shading, times any tint. */
+    private static double[] shadeFor(String direction, int tintIndex) {
+        double shade = switch (direction) {
             case "up" -> SHADE_UP;
             case "down" -> SHADE_DOWN;
             case "north", "south" -> SHADE_NS;
             default -> SHADE_EW;
+        };
+        if (tintIndex < 0) {
+            return new double[]{shade, shade, shade};
+        }
+        return new double[]{
+                shade * ((DEFAULT_TINT >> 16) & 0xFF) / 255.0,
+                shade * ((DEFAULT_TINT >> 8) & 0xFF) / 255.0,
+                shade * (DEFAULT_TINT & 0xFF) / 255.0,
         };
     }
 
@@ -245,7 +264,7 @@ public final class IsometricRenderer {
     private static boolean triangle(int[] argb, double[] depth, int canvas,
                                     double[] a, double[] b, double[] c,
                                     double[] uvA, double[] uvB, double[] uvC,
-                                    BufferedImage texture, double shade) {
+                                    BufferedImage texture, double[] shade) {
         double area = (b[0] - a[0]) * (c[1] - a[1]) - (b[1] - a[1]) * (c[0] - a[0]);
         if (Math.abs(area) < 1e-9) {
             return false;
@@ -292,11 +311,11 @@ public final class IsometricRenderer {
         return drew;
     }
 
-    private static int shadeColor(int argb, double shade) {
+    private static int shadeColor(int argb, double[] shade) {
         int a = (argb >>> 24) & 0xFF;
-        int r = (int) Math.min(255, ((argb >> 16) & 0xFF) * shade);
-        int g = (int) Math.min(255, ((argb >> 8) & 0xFF) * shade);
-        int b = (int) Math.min(255, (argb & 0xFF) * shade);
+        int r = (int) Math.min(255, ((argb >> 16) & 0xFF) * shade[0]);
+        int g = (int) Math.min(255, ((argb >> 8) & 0xFF) * shade[1]);
+        int b = (int) Math.min(255, (argb & 0xFF) * shade[2]);
         return (a << 24) | (r << 16) | (g << 8) | b;
     }
 

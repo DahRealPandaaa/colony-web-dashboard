@@ -1,16 +1,13 @@
 package DahRealPanda.plugins.colonyweb.colony;
 
-import DahRealPanda.plugins.colonyweb.ColonyWeb;
 import DahRealPanda.plugins.colonyweb.colony.model.ColonySnapshot;
 import DahRealPanda.plugins.colonyweb.texture.DomumOrnamentumResolver;
-import com.mojang.logging.LogUtils;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraftforge.common.capabilities.ForgeCapabilities;
 import net.minecraftforge.items.IItemHandler;
-import org.slf4j.Logger;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -38,8 +35,6 @@ import static DahRealPanda.plugins.colonyweb.colony.MineColoniesReflect.invoke;
  * every rack already counted and reports an empty warehouse from the second scan onward.</p>
  */
 public final class WarehouseScanner {
-    private static final Logger LOGGER = LogUtils.getLogger();
-
     /** Rack positions already counted, so a rack shared by two warehouses is tallied once. */
     private final Set<BlockPos> countedContainers = new HashSet<>();
 
@@ -49,10 +44,7 @@ public final class WarehouseScanner {
     /** Add one warehouse building's contents to the snapshot. */
     public void addWarehouse(ServerLevel level, Object building, BlockPos hutPos,
                              ColonySnapshot.Warehouse warehouse) {
-        int before = warehouse.stacks.size();
-        int racks = 0;
         for (IItemHandler handler : rackInventories(level, building, hutPos)) {
-            racks++;
             for (int slot = 0; slot < handler.getSlots(); slot++) {
                 ItemStack stack = handler.getStackInSlot(slot);
                 if (stack != null && !stack.isEmpty()) {
@@ -60,8 +52,6 @@ public final class WarehouseScanner {
                 }
             }
         }
-        LOGGER.info("{} warehouse at {}: {} racks read, {} new stacks ({} total)",
-                ColonyWeb.LOG, hutPos, racks, warehouse.stacks.size() - before, warehouse.stacks.size());
     }
 
     private void add(ColonySnapshot.Warehouse warehouse, ItemStack stack) {

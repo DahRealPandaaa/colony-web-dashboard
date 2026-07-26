@@ -84,6 +84,13 @@ public final class BlockModel {
         public double[] uv;
         /** Face texture rotation in degrees (0/90/180/270). */
         public int rotation;
+        /**
+         * The model's {@code tintindex}, or -1 for an untinted face.
+         *
+         * <p>Grass and leaves ship greyscale textures and are coloured at draw time; a face
+         * that declares a tint index must be multiplied by a colour or it renders bone white.</p>
+         */
+        public int tintIndex = -1;
     }
 
     /** Optional per-element rotation about one axis. */

@@ -48,7 +48,17 @@ export const api = {
     citizen: (colonyId, citizenId) => getJson(`/api/colony/${colonyId}/citizen/${citizenId}`),
 };
 
+/**
+ * How icons are drawn — keep in lockstep with `PngCache.RENDER_VERSION` on the server.
+ *
+ * Icons are cached by the browser for a week, so a server that starts drawing them differently
+ * would go unnoticed until that expired: the browser never asks, and the ETag never gets to
+ * answer. Riding the version in the URL makes a new render a new URL, and the stale entry just
+ * falls out of the cache on its own.
+ */
+const RENDER_VERSION = "2";
+
 /** PNG icon for an item/block texture key (the "#" in Domum variants must be encoded). */
 export function textureUrl(key) {
-    return "/textures/" + encodeURIComponent(key) + ".png";
+    return "/textures/" + encodeURIComponent(key) + ".png?v=" + RENDER_VERSION;
 }

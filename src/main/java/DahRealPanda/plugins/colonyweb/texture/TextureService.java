@@ -26,14 +26,18 @@ import java.util.Set;
  * modded jar textures and cached vanilla assets, with an in-memory + disk cache and a
  * generated placeholder fallback.
  *
- * <p>Domum Ornamentum blocks get a real 3D icon: the block's own model geometry is rendered
- * isometrically with each material component's texture substituted in, so a "Brick Extra
- * Shingle" looks like a shingle made of brick rather than a flat brick square.</p>
+ * <p>Blocks get the icon a player sees in their inventory: the model's own geometry rendered
+ * isometrically under the vanilla GUI transform. Items whose model is a flat sprite (wheat, a
+ * stick, a door) keep that sprite, because that is equally what the inventory shows.</p>
+ *
+ * <p>Domum Ornamentum blocks go one step further and have each material component's texture
+ * substituted into the model first, so a "Brick Extra Shingle" looks like a shingle made of
+ * brick rather than a flat brick square.</p>
  */
 public final class TextureService {
     private static final Logger LOGGER = LogUtils.getLogger();
 
-    /** Edge length of generated 3D Domum Ornamentum icons. */
+    /** Edge length of generated 3D block icons. */
     private static final int ICON_SIZE = 64;
 
     /** Texture-variable / component-id words that carry no matching signal. */
@@ -89,7 +93,45 @@ public final class TextureService {
             }
         }
 
+        // Everything else: draw whatever the inventory slot would draw. Items whose model is a
+        // flat sprite report no geometry and drop through to their texture unchanged.
+        byte[] rendered = renderInventoryIcon(base);
+        if (rendered != null) {
+            return rendered;
+        }
+
         return pngForRegistryName(base);
+    }
+
+    /**
+     * Render a block the way a player sees it in their inventory.
+     *
+     * <p>A block's inventory icon is its model drawn under the vanilla GUI transform, not one of
+     * its face textures — a furnace shows its front, a stair shows its steps, a fence shows its
+     * inventory post. Picking a single texture out of the model instead (which is all
+     * {@link ModelResolver#resolveTexture} can do) turns every one of those into a flat swatch
+     * of the wrong thing.</p>
+     *
+     * @return null when the item has no geometry to draw, so the caller keeps the flat texture
+     */
+    private byte[] renderInventoryIcon(String registryName) {
+        try {
+            ResourceLocation rl = ResourceLocation.tryParse(registryName);
+            if (rl == null) {
+                return null;
+            }
+            Optional<BlockModel> resolved = modelResolver.resolveInventoryModel(rl.getNamespace(), rl.getPath());
+            if (resolved.isEmpty()) {
+                return null;
+            }
+            BlockModel model = resolved.get();
+            BufferedImage icon = IsometricRenderer.render(
+                    model, ref -> imageForTextureRef(model.resolveTextureRef(ref)), ICON_SIZE);
+            return icon != null ? encode(icon) : null;
+        } catch (Throwable t) {
+            LOGGER.debug("[ColonyWeb] inventory render failed for {}", registryName, t);
+            return null;
+        }
     }
 
     // ------------------------------------------------------------------

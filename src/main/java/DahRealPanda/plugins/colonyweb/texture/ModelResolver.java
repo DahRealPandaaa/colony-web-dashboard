@@ -46,6 +46,26 @@ public final class ModelResolver {
     }
 
     /**
+     * Resolve the geometry Minecraft draws in an inventory slot, when there is any.
+     *
+     * <p>The <em>item</em> model is authoritative here, exactly as it is in game: it decides
+     * whether a slot shows a flat sprite or a 3D block. Wheat's model inherits
+     * {@code item/generated} and carries no {@code elements}, so it stays a sprite; oak stairs'
+     * model inherits {@code block/oak_stairs} and brings the cuboids along, so it is drawn as a
+     * stair. Only when a namespace ships no item model at all — some mods build theirs at
+     * runtime — do we fall back to {@link #resolveModel}'s block/blockstate search.</p>
+     *
+     * @return the model to rasterize, or empty when the item should keep its flat texture
+     */
+    public Optional<BlockModel> resolveInventoryModel(String namespace, String path) {
+        BlockModel model = new BlockModel();
+        if (loadInto(model, namespace, "models/item/" + path + ".json", 0)) {
+            return model.elements.isEmpty() ? Optional.empty() : Optional.of(model);
+        }
+        return resolveModel(namespace, path);
+    }
+
+    /**
      * Resolve the full geometry of a block/item so it can be rendered in 3D.
      *
      * <p>Tries the item model, then the block model, then whatever the blockstate points at,
@@ -76,14 +96,17 @@ public final class ModelResolver {
      * Merge a model and its ancestors into {@code model}. Called child-first, so
      * {@code putIfAbsent} gives the child precedence and the closest ancestor that defines
      * {@code elements} supplies the geometry.
+     *
+     * @return whether {@code modelPath} itself existed — an empty result then means "this model
+     *         is deliberately flat", not "no such item", which are different answers
      */
-    private void loadInto(BlockModel model, String namespace, String modelPath, int depth) {
+    private boolean loadInto(BlockModel model, String namespace, String modelPath, int depth) {
         if (depth > 8) {
-            return;
+            return false;
         }
         String json = readAsset(namespace, modelPath);
         if (json == null) {
-            return;
+            return false;
         }
         try {
             JsonObject root = JsonParser.parseString(json).getAsJsonObject();
@@ -107,6 +130,7 @@ public final class ModelResolver {
         } catch (Exception ignored) {
             // Malformed or loader-driven model — the caller falls back to a flat texture.
         }
+        return true;
     }
 
     private void parseElements(BlockModel model, JsonArray elements) {
@@ -159,6 +183,9 @@ public final class ModelResolver {
                     }
                     if (faceObj.has("rotation")) {
                         face.rotation = faceObj.get("rotation").getAsInt();
+                    }
+                    if (faceObj.has("tintindex")) {
+                        face.tintIndex = faceObj.get("tintindex").getAsInt();
                     }
                     if (face.texture != null) {
                         element.faces.put(entry.getKey(), face);
