@@ -17,9 +17,9 @@ concurrency:
 
 jobs:
   release:
+    if: github.ref == 'refs/heads/main'
     name: Build and publish mod jar
     runs-on: ubuntu-latest
-
     steps:
       - name: Check out repository
         uses: actions/checkout@v4
