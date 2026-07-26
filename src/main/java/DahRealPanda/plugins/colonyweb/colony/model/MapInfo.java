@@ -11,7 +11,7 @@ public class MapInfo {
     /** False when the colony cannot be mapped at all (map disabled, or no colony data yet). */
     public boolean available;
 
-    /** True once at least one chunk has been drawn, i.e. the image is worth requesting. */
+    /** True once a PNG has been encoded, so /map/{colonyId}.png is expected to exist. */
     public boolean ready;
 
     /** Why {@link #available} is false, for the empty state. Null when it is true. */

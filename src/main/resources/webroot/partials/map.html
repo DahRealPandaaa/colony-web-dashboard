@@ -14,10 +14,10 @@
                 <span class="switch-label">Labels</span>
             </label>
 
-            <span class="chip chip-btn" role="button" tabindex="0"
-                  @click="fitMap($refs.stage)" @keydown.enter="fitMap($refs.stage)">Fit</span>
-            <span class="chip chip-btn" role="button" tabindex="0"
-                  @click="centreMap($refs.stage)" @keydown.enter="centreMap($refs.stage)">Town hall</span>
+            <button type="button" class="chip chip-btn"
+                    @click="fitMap($refs.stage)">Fit</button>
+            <button type="button" class="chip chip-btn"
+                    @click="centreMap($refs.stage)">Town hall</button>
 
             <span class="chip" x-show="map?.available"
                   :class="mappedPct >= 100 ? 'good' : ''"
@@ -34,6 +34,7 @@
              @pointerdown="onMapDown($event)"
              @pointermove="onMapMove($event, $refs.stage)"
              @pointerup="onMapUp()"
+             @pointercancel="onMapUp()"
              @pointerleave="onMapLeave()">
 
             <div class="map-world" :style="mapTransform" x-show="mapReady">

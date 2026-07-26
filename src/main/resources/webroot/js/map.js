@@ -212,7 +212,9 @@ export function mapState() {
         /** Only citizens the server could actually place — an unloaded citizen has no position. */
         get mapCitizens() {
             if (!this.showCitizens) return [];
-            return (this.citizens || []).filter((c) => c.x || c.z);
+            return (this.citizens || []).filter((c) =>
+                c.spawned && Number.isFinite(c.x) && Number.isFinite(c.z)
+            );
         },
 
         /** Dot colour: guards, workers, children and the unemployed read differently. */
