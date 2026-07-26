@@ -141,13 +141,13 @@ jobs:
             exit 1
           fi
 
-          for attempt in 1 2 3; do
-            if ! git pull --rebase origin main; then
-              echo "::error::Unable to rebase release commit onto latest main. Resolve conflicts and rerun."
-              git rebase --abort || true
-              exit 1
-            fi
+          if ! git pull --rebase origin main; then
+            echo "::error::Unable to rebase release commit onto latest main. Resolve conflicts and rerun."
+            git rebase --abort || true
+            exit 1
+          fi
 
+          for attempt in 1 2 3; do
             if git rev-parse --verify --quiet "refs/tags/v${VERSION}" >/dev/null; then
               git tag -d "v${VERSION}"
             fi
@@ -161,7 +161,12 @@ jobs:
               exit 1
             fi
 
-            sleep $((attempt * RETRY_BACKOFF_BASE_SECONDS))
+            sleep $((RETRY_BACKOFF_BASE_SECONDS ** attempt))
+            if ! git pull --rebase origin main; then
+              echo "::error::Unable to rebase release commit onto latest main. Resolve conflicts and rerun."
+              git rebase --abort || true
+              exit 1
+            fi
           done
 
       - name: Create release
