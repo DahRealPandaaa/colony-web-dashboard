@@ -43,6 +43,11 @@ public final class ColonyDataProvider {
         return MineColoniesReflect.isMineColoniesLoaded();
     }
 
+    /** The level a colony lives in, for callers that only have its dimension id. */
+    public ServerLevel levelFor(String dimension) {
+        return lookup.levelFor(dimension);
+    }
+
     /** Colonies a player is a member of — used by {@code /colonyweb sync}. */
     public List<Integer> coloniesFor(UUID playerId, String playerName) {
         return available() ? lookup.coloniesFor(playerId, playerName) : List.of();

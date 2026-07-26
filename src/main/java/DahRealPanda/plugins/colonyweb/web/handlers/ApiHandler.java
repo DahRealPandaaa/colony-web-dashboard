@@ -6,6 +6,7 @@ import DahRealPanda.plugins.colonyweb.auth.WebUser;
 import DahRealPanda.plugins.colonyweb.colony.ColonyCache;
 import DahRealPanda.plugins.colonyweb.colony.model.CitizenInfo;
 import DahRealPanda.plugins.colonyweb.colony.model.ColonySummary;
+import DahRealPanda.plugins.colonyweb.map.ColonyMapService;
 import DahRealPanda.plugins.colonyweb.web.JsonUtil;
 import com.mojang.logging.LogUtils;
 import com.sun.net.httpserver.HttpExchange;
@@ -29,6 +30,7 @@ import java.util.Optional;
  * /api/colony/{id}/citizen/{citizenId}     one citizen plus their inventory
  * /api/colony/{id}/research                research branches and progress
  * /api/colony/{id}/combat                  raid status, guards, guard posts
+ * /api/colony/{id}/map                     where the surface map sits and how far along it is
  * </pre>
  *
  * <p>Every route is scoped to the signed-in player: {@code /api/colonies} only lists colonies
@@ -38,10 +40,12 @@ public final class ApiHandler implements HttpHandler {
     private static final Logger LOGGER = LogUtils.getLogger();
 
     private final ColonyCache cache;
+    private final ColonyMapService maps;
     private final AuthService auth;
 
-    public ApiHandler(ColonyCache cache, AuthService auth) {
+    public ApiHandler(ColonyCache cache, ColonyMapService maps, AuthService auth) {
         this.cache = cache;
+        this.maps = maps;
         this.auth = auth;
     }
 
@@ -109,6 +113,7 @@ public final class ApiHandler implements HttpHandler {
             case "research" -> respond(exchange, cache.research(colonyId), "No research data yet");
             case "combat" -> respond(exchange, cache.combat(colonyId), "No combat data yet");
             case "citizen" -> citizen(exchange, colonyId, parseId(parts.length > 2 ? parts[2] : null));
+            case "map" -> JsonUtil.sendJson(exchange, 200, maps.info(colonyId));
             default -> JsonUtil.sendError(exchange, 404, "Not Found");
         }
     }

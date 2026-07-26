@@ -33,6 +33,19 @@ public class Config {
                     "A dedicated server has no client textures of its own, so this is required for vanilla icons.")
             .define("autoDownloadVanillaAssets", true);
 
+    private static final ForgeConfigSpec.BooleanValue MAP_ENABLED = BUILDER
+            .comment(
+                    "Show the colony map tab on the dashboard.",
+                    "The map is drawn from chunks the server already has loaded, a few at a time, and only",
+                    "while somebody actually has the map open — so it costs nothing when nobody is looking.")
+            .define("mapEnabled", true);
+
+    private static final ForgeConfigSpec.IntValue MAP_RADIUS = BUILDER
+            .comment(
+                    "How far from the colony centre the map reaches, in blocks.",
+                    "The image is one pixel per block, so 256 means at most a 512x512 map per colony.")
+            .defineInRange("mapRadius", 256, 64, 512);
+
     private static final ForgeConfigSpec.ConfigValue<String> PUBLIC_HOST = BUILDER
             .comment("Host name shown in the /colonyweb command link. Leave blank to use the server's detected address.")
             .define("publicHost", "");
@@ -59,6 +72,8 @@ public class Config {
     public static String bindAddress;
     public static int refreshIntervalSeconds;
     public static boolean autoDownloadVanillaAssets;
+    public static boolean mapEnabled;
+    public static int mapRadius;
     public static String publicHost;
     public static boolean authEnabled;
     public static int sessionDays;
@@ -70,6 +85,8 @@ public class Config {
         bindAddress = BIND_ADDRESS.get();
         refreshIntervalSeconds = REFRESH_INTERVAL_SECONDS.get();
         autoDownloadVanillaAssets = AUTO_DOWNLOAD_ASSETS.get();
+        mapEnabled = MAP_ENABLED.get();
+        mapRadius = MAP_RADIUS.get();
         publicHost = PUBLIC_HOST.get();
         authEnabled = AUTH_ENABLED.get();
         sessionDays = SESSION_DAYS.get();
