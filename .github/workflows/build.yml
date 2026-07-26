@@ -54,7 +54,10 @@ jobs:
 
           # Works for merge, squash and rebase merges alike: ask which PR this commit came from.
           pulls="$RUNNER_TEMP/pulls.json"
-          gh api "repos/${GITHUB_REPOSITORY}/commits/${GITHUB_SHA}/pulls" > "$pulls" || echo '[]' > "$pulls"
+          if ! gh api "repos/${GITHUB_REPOSITORY}/commits/${GITHUB_SHA}/pulls" > "$pulls"; then
+            echo "::warning::Unable to resolve PR for ${GITHUB_SHA}; defaulting to patch bump"
+            echo '[]' > "$pulls"
+          fi
           branch=$(jq -r '.[0].head.ref // ""' "$pulls")
           body=$(jq -r '.[0].body // ""' "$pulls")
 
