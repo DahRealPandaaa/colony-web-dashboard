@@ -41,8 +41,9 @@ The mod does **not** need to be installed on the client — only on the server.
 
 ### Live dashboard
 - **Per-colony view** with a colony selector (only the colonies you may see).
-- **Six tabs** in a sidebar — Overview, Buildings, Citizens, Research, Combat and Warehouse —
-  each deep-linkable via the URL hash (`#<colonyId>/<tab>`), each with a live count badge.
+- **Seven tabs** in a sidebar — Overview, Map, Buildings, Citizens, Research, Combat and
+  Warehouse — each deep-linkable via the URL hash (`#<colonyId>/<tab>`), each with a live count
+  badge.
 - **Live updates via SSE** (Server-Sent Events) — the page re-renders automatically when
   builders progress, resources change, or work orders start/finish. No manual refresh.
 - **Connection status indicator** (live / reconnecting) with an animated dot.
@@ -64,6 +65,26 @@ The mod does **not** need to be installed on the client — only on the server.
   and average saturation.
 - Every **active work order** with its action badge, progress bar and assigned builder.
 - The **Builders panel**: who is building what, and how far along.
+
+### Map tab
+- A **live top-down map of the colony**, in the spirit of Dynmap but drawn by this mod alone —
+  no extra server, no extra port.
+- The terrain is rendered **server-side from the world itself**, one pixel per block, using each
+  block's own **map colour** (the palette the in-game map item uses) with **hill shading** from
+  the surface heightmap and **depth shading** for water. Rivers, roads, fields and cliffs are all
+  legible at a glance.
+- **Every building and decoration** is pinned at its real coordinates with its hut-block artwork;
+  anything under construction is highlighted. **Click a pin** for the same detail modal the
+  Buildings tab opens.
+- **Every citizen** is plotted where they actually are, colour-coded by worker / unemployed /
+  child / not-currently-loaded. **Click a dot** for their full citizen modal.
+- **Drag to pan, scroll to zoom** (20 %–800 %), with *Fit* and *Town hall* framing buttons, a
+  live X/Z readout under the cursor, and toggles for buildings, citizens and name labels.
+- The map is drawn **incrementally, a few chunks per scan**, closest to the town hall first, so
+  it never costs the server a tick spike — a coverage chip shows the progress. Areas nobody has
+  loaded stay blank, and once a chunk *has* been drawn it stays on the map even after it unloads.
+- Mapping only runs **while somebody has the tab open**; a server nobody is looking at does no
+  mapping work at all.
 
 ### Citizens tab
 - A card per citizen: job, workplace, **health / saturation / happiness** meters, their job's
@@ -231,16 +252,28 @@ colony. It also invalidates nothing — existing sessions keep working and pick 
 │   MINECOLONIES ├──────────────────────────────────────────────────────────┤
 │                │ ┌──────────┐┌──────────┐┌──────────┐        BUILDERS     │
 │ ▸ Overview     │ │ CITIZENS ││ HAPPINESS││ BUILDINGS│   ┌───────────────┐  │
-│   Buildings 14 │ │  24 / 30 ││   7.4    ││    14    │   │ [UPGRADE]     │  │
-│   Citizens  24 │ │ 3 kids   ││ ▓▓▓▓▓▓▓░ ││ 2 orders │   │ Barracks 3→4  │  │
-│   Research  12 │ └──────────┘└──────────┘└──────────┘   │ ▓▓▓▓▓░░░  55% │  │
-│   Combat     3 │                                        └───────────────┘  │
-│   Warehouse 37 │ WORK ORDERS                                               │
-│                │  [UPGRADE] Barracks    ▓▓▓▓▓░░░  3 → 4   Bob Miller       │
+│   Map          │ │  24 / 30 ││   7.4    ││    14    │   │ [UPGRADE]     │  │
+│   Buildings 14 │ │ 3 kids   ││ ▓▓▓▓▓▓▓░ ││ 2 orders │   │ Barracks 3→4  │  │
+│   Citizens  24 │ └──────────┘└──────────┘└──────────┘   │ ▓▓▓▓▓░░░  55% │  │
+│   Research  12 │                                        └───────────────┘  │
+│   Combat     3 │ WORK ORDERS                                               │
+│   Warehouse 37 │  [UPGRADE] Barracks    ▓▓▓▓▓░░░  3 → 4   Bob Miller       │
 │                │  [BUILD]   Paved Road  ▓▓░░░░░░  0 → 1   unclaimed        │
 │ NA Nathan      │                                                           │
 │    Operator  ⇥ │                                                           │
 └────────────────┴──────────────────────────────────────────────────────────┘
+
+  Map tab ──────────────────────────────────────────────────────────────────┐
+  │ [Buildings][Citizens][Labels]  Fit  Town hall   Mapping 92%   X 128 Z -341│
+  │ ┌───────────────────────────────────────────────────────────────────────┐ │
+  │ │ ≈≈≈≈≈░░░░▒▒▒▒▒▒▒▒▓▓▓▓▓░░░░░░░░░░░░░░░░░░▒▒▒▒▒▒░░░░░░░░░░░░░░░░░░░░░░░ │ │
+  │ │ ≈≈≈≈░░░░░▒▒▒▒[▣]▒▒▒░░░░░·  ·  ░░░░░░░░░░▒▒▒▒░░░░░░░░░░░░░[▣]░░░░░░░░ │ │
+  │ │ ≈≈≈░░░░░░▒▒▒▒▒▒▒▒▒░░░░(◉)░ ·░░░░░[▣]░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░ │ │
+  │ │ ░░░░░░░▓▓▓▓▓▓▓░░░░░░░·  · ░░░░░░░░░░░░░░░[▣]░░░░░░░░░░░░░░░░░░░░░░░░ │ │
+  │ │ ● Town hall  ● Being built  ● Worker  ● Unemployed  ● Child          │ │
+  │ └───────────────────────────────────────────────────────────────────────┘ │
+  │   ▣ building pin (click → detail modal)   · citizen   (◉) town hall       │
+  └───────────────────────────────────────────────────────────────────────────┘
 
   Citizens tab → click a citizen ───────────────────────────────────────────┐
   │ Bob Miller  [Builder]        Works at Barracks · Lives at Residence     │
@@ -269,6 +302,11 @@ colony. It also invalidates nothing — existing sessions keep working and pick 
    pushed to connected browsers, which re-fetch the affected endpoint.
 4. HTTP handlers run off-thread and only read the cached immutable DTOs, so the world is never
    touched from a request thread.
+5. The colony map rides the same server-thread pass, because it too needs the world: for each
+   colony a browser is currently looking at, it draws a small budget of **loaded** chunks into
+   that colony's raster (nearest the town hall first), then hands a copy to a worker thread to
+   shade and encode as a PNG. Requesting the map is what registers the interest, so nothing is
+   mapped unless somebody is watching.
 
 ---
 
@@ -297,6 +335,7 @@ src/main/java/DahRealPanda/plugins/colonyweb/
       ApiHandler.java            # /api/colonies, /api/colony/{id}/…  (access-scoped)
       EventsHandler.java         # /events (SSE)
       TextureHandler.java        # /textures/{key}.png
+      MapHandler.java            # /map/{colonyId}.png
       StaticHandler.java         # serves webroot/ assets
 
   colony/
@@ -318,9 +357,14 @@ src/main/java/DahRealPanda/plugins/colonyweb/
     ColonyCache.java             # thread-safe latest-scan holder (all payloads)
     model/                       # DTOs: ColonySummary, ColonySnapshot, ColonyStats,
                                  #       BuildingInfo, WorkOrderInfo, BuilderInfo,
-                                 #       CitizenInfo, ResearchInfo, CombatInfo,
+                                 #       CitizenInfo, ResearchInfo, CombatInfo, MapInfo,
                                  #       ItemInfo, ItemCount, MaterialComponent,
                                  #       ResourceEntry, ItemRef
+
+  map/
+    ColonyMapService.java        # per-colony surface maps: interest, budgets, PNG publishing
+    ColonyMap.java               # one colony's raster + per-chunk draw stamps
+    SurfaceRenderer.java         # loaded chunks -> map colours, hill shading -> PNG
 
   service/
     ColonyRefreshScheduler.java  # periodic scan on the server thread + SSE publish
@@ -350,8 +394,8 @@ src/main/resources/
     favicon.svg
     style.css                    # generated by Tailwind — do not edit by hand
     partials/                    # one file per tab, fetched at boot
-      overview.html  buildings.html  citizens.html  research.html
-      combat.html    warehouse.html
+      overview.html  map.html    buildings.html  citizens.html
+      research.html  combat.html warehouse.html
       modal-building.html  modal-citizen.html  login.html
     js/
       boot.js                    # load the partials, then start Alpine
@@ -360,6 +404,7 @@ src/main/resources/
       format.js                  # pure presentation helpers (pct, badges, labels)
       auth.js                    # sign-in screen state
       icons.js                   # wiki artwork lookup + per-<img> fallback chain
+      map.js                     # colony map: pan/zoom transform, markers, coverage polling
       overview.js  buildings.js  citizens.js  research.js
       combat.js    warehouse.js
     img/                         # bundled MineColonies wiki artwork
@@ -431,8 +476,10 @@ rebuild it:
 | GET    | `/api/colony/{id}/citizen/{citizenId}`  |  ✓   | one citizen **plus their inventory and equipment**   |
 | GET    | `/api/colony/{id}/research`             |  ✓   | research branches, states and progress               |
 | GET    | `/api/colony/{id}/combat`               |  ✓   | raid status, guard roster, guard posts, events       |
+| GET    | `/api/colony/{id}/map`                  |  ✓   | where the surface map sits and how far along it is   |
 | GET    | `/events`                               |  ✓   | **SSE** stream; emits `colonies` and `colony` events |
 | GET    | `/textures/{key}.png`                   |  ✓   | PNG icon for an item/block/DO stack                  |
+| GET    | `/map/{colonyId}.png`                   |  ✓   | rendered colony surface, one pixel per block         |
 
 Only the shell is public — it is just markup and needs a session before it shows anything.
 Authenticated routes answer `401 {"error": "..."}` with no session, which the front-end turns
@@ -575,6 +622,21 @@ The client reacts by re-fetching `/api/colonies` and/or the current `/api/colony
   "events": [] }
 ```
 
+`GET /api/colony/{id}/map`
+```json
+{ "available": true, "ready": true, "unavailableReason": null,
+  "dimension": "minecraft:overworld", "centerX": 120, "centerY": 64, "centerZ": -340,
+  "minX": 16, "minZ": -448, "width": 320, "height": 288,
+  "version": 7, "renderedAt": 1761500000000, "chunksMapped": 331, "chunksTotal": 360 }
+```
+
+The image lives at `/map/{colonyId}.png` and is exactly `width × height` pixels, with its
+top-left pixel at world `(minX, minZ)` — so a marker for anything at block `(x, z)` belongs at
+pixel `(x - minX, z - minZ)`. Pixels for chunks that have not been drawn are **transparent**.
+`version` bumps on every redraw and must be used as a cache-buster; poll this document while
+`chunksMapped < chunksTotal` to watch the map fill in. `ready` is false until the first chunk has
+been drawn, and `/map/{colonyId}.png` answers `404` until then.
+
 Key fields:
 - `buildings[].kind` — `"building"` or `"decoration"`.
 - `required[].material` — combined Domum Ornamentum material name, else `null`.
@@ -602,6 +664,8 @@ Config file (generated on first server start):
 | `bindAddress`               | `0.0.0.0` | Bind interface (`127.0.0.1` for local only, or an allocated IP).|
 | `refreshIntervalSeconds`    | `3`       | Re-scan + SSE push cadence.                                    |
 | `autoDownloadVanillaAssets` | `true`    | Download vanilla client textures on first run.                 |
+| `mapEnabled`                | `true`    | Show the colony map tab.                                       |
+| `mapRadius`                 | `256`     | How far the map reaches from the colony centre, in blocks (64–512). |
 | `publicHost`                | `""`      | Host shown in the `/colonyweb` link (blank = auto-detect).     |
 | `authEnabled`               | `true`    | Require a pairing-code sign-in. **Off makes the dashboard fully public.** |
 | `sessionDays`               | `30`      | How long a browser stays signed in (1–365).                    |
@@ -613,6 +677,8 @@ httpPort = 8723
 bindAddress = "0.0.0.0"
 refreshIntervalSeconds = 3
 autoDownloadVanillaAssets = true
+mapEnabled = true
+mapRadius = 256
 publicHost = ""
 authEnabled = true
 sessionDays = 30
@@ -731,6 +797,9 @@ for a sign-in code.
 | Signed out unexpectedly | The session expired (`sessionDays`), an operator ran `/colonyweb logout`, or `auth.json` was deleted. |
 | Icons show a magenta/black checker | Texture couldn't be resolved (vanilla jar not downloaded, or a modded texture path differs). Vanilla icons require `autoDownloadVanillaAssets = true` and internet on first run. |
 | Icons are still flat after upgrading | Cached PNGs are discarded automatically when the renderer changes, on the first start after the upgrade. If they persist, delete `<server>/colonyweb/textures/` and restart. |
+| The map stays mostly blank | The map only draws chunks the server currently has loaded. Fly or walk the area once (or enable chunk loading around the colony) and it fills in — drawn chunks are then kept even after they unload. |
+| The map never gets past "Mapping n%" | Those chunks have never been loaded while the tab was open. The percentage counts the whole square the map covers, so a colony at the edge of explored terrain will not reach 100%. |
+| The map tab is missing | `mapEnabled = false` in `config/colonyweb-common.toml`. |
 | A block renders as a flat swatch | Its model had no parseable geometry (e.g. a runtime-generated model, or a `builtin/entity` one like chests and beds), so the mod fell back to a texture. Everything else still works. |
 | `/colonyweb` link not clickable | Fixed — the link is a proper `OPEN_URL` chat component. |
 

@@ -150,6 +150,66 @@
     .btn-icon    { @apply w-10 h-10 grid place-items-center rounded-lg border border-line text-slate-300
                           hover:bg-white/[0.06] hover:text-white transition cursor-pointer shrink-0; }
 
+    /* ---------- Colony map ----------
+       The stage clips one transformed world layer that holds the terrain image and every
+       marker, so panning is a single transform rather than a position per marker. The
+       chequerboard shows through wherever the server has not drawn a chunk yet. */
+    .map-frame {
+        @apply relative overflow-hidden rounded-2xl border border-line bg-ink-950
+               h-[min(70vh,720px)] select-none cursor-grab;
+        touch-action: none;
+        background-image:
+            linear-gradient(45deg, rgba(255, 255, 255, 0.022) 25%, transparent 25%, transparent 75%, rgba(255, 255, 255, 0.022) 75%),
+            linear-gradient(45deg, rgba(255, 255, 255, 0.022) 25%, transparent 25%, transparent 75%, rgba(255, 255, 255, 0.022) 75%);
+        background-size: 24px 24px;
+        background-position: 0 0, 12px 12px;
+    }
+    .map-frame.grabbing { @apply cursor-grabbing; }
+
+    /* Deliberately no `will-change: transform`: promoting this to its own composited layer gets
+       it rasterised once and GPU-scaled, which leaves marker labels blurry at high zoom. */
+    .map-world   { @apply absolute top-0 left-0 origin-top-left; }
+    /* max-w-none because the preflight caps images at their container's width. */
+    .map-terrain { @apply block max-w-none pixelated pointer-events-none; }
+
+    /* Buildings. The icon keeps its own art; the frame is what makes it read as a pin. */
+    .map-pin     { @apply absolute grid place-items-center rounded-lg border border-line-strong
+                          bg-ink-900/85 p-0.5 cursor-pointer transition-colors hover:border-accent
+                          hover:bg-ink-800 focus:outline-none focus-visible:border-accent; }
+    .map-pin img { @apply w-full h-full object-contain pointer-events-none; }
+    .map-pin.building { @apply border-accent bg-accent/25 shadow-glow; }
+    .map-pin-label {
+        @apply absolute top-full left-1/2 mt-1 px-1.5 py-0.5 rounded text-[10px] font-semibold
+               whitespace-nowrap bg-ink-950/85 border border-line text-slate-200 pointer-events-none;
+        transform: translateX(-50%);
+    }
+
+    /* Citizens. Hover may only change colour: the marker's transform is the zoom counter-scale,
+       set inline per marker, and a hover transform here would simply lose to it. */
+    .map-dot            { @apply absolute rounded-full border border-ink-950/80 cursor-pointer
+                                 transition-colors hover:border-white; }
+    .map-dot.worker     { @apply bg-accent-soft; }
+    .map-dot.idle       { @apply bg-amber-400; }
+    .map-dot.child      { @apply bg-emerald-400; }
+    .map-dot.asleep     { @apply bg-slate-500/70; }
+
+    /* Drawn as a ring wider than a building pin, because the town hall's own pin sits on top of
+       it — a marker the same size would simply never be seen. */
+    .map-centre { @apply absolute rounded-full border-2 border-rose-400 bg-rose-500/15 pointer-events-none; }
+
+    .map-note   { @apply absolute inset-x-0 top-1/2 -translate-y-1/2 text-center text-slate-400 text-[13.5px] px-6; }
+
+    .map-legend { @apply absolute left-3 bottom-3 flex flex-wrap items-center gap-x-3 gap-y-1.5
+                         rounded-xl border border-line bg-ink-900/85 backdrop-blur px-3 py-2; }
+    .map-key    { @apply inline-flex items-center gap-1.5 text-[11.5px] text-slate-300; }
+    .map-swatch { @apply w-2.5 h-2.5 rounded-full inline-block shrink-0; }
+    .map-swatch.centre { @apply bg-rose-500/40 border-2 border-rose-400; }
+    .map-swatch.build  { @apply bg-accent/40 border border-accent rounded-sm; }
+    .map-swatch.worker { @apply bg-accent-soft; }
+    .map-swatch.idle   { @apply bg-amber-400; }
+    .map-swatch.child  { @apply bg-emerald-400; }
+    .map-swatch.asleep { @apply bg-slate-500/70; }
+
     /* ---------- Modals ---------- */
     .modal-backdrop { @apply fixed inset-0 z-50 grid place-items-center p-4 bg-ink-950/85 backdrop-blur-sm; }
     .modal-card     { @apply w-[min(1000px,96vw)] max-h-[88vh] overflow-auto rounded-2xl border border-line-strong

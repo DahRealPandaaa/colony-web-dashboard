@@ -3,6 +3,7 @@ package DahRealPanda.plugins.colonyweb;
 import DahRealPanda.plugins.colonyweb.auth.AuthService;
 import DahRealPanda.plugins.colonyweb.colony.ColonyCache;
 import DahRealPanda.plugins.colonyweb.colony.ColonyDataProvider;
+import DahRealPanda.plugins.colonyweb.map.ColonyMapService;
 import DahRealPanda.plugins.colonyweb.service.ColonyRefreshScheduler;
 import DahRealPanda.plugins.colonyweb.texture.TextureService;
 import DahRealPanda.plugins.colonyweb.texture.VanillaAssetProvider;
@@ -35,6 +36,7 @@ public final class ColonyWebService {
     private final ColonyCache cache = new ColonyCache();
     private final SseBroadcaster broadcaster = new SseBroadcaster();
     private final ColonyDataProvider provider;
+    private final ColonyMapService maps;
     private final AuthService auth;
     private final VanillaAssetProvider vanillaAssets;
     private final WebServer webServer;
@@ -44,12 +46,14 @@ public final class ColonyWebService {
         Path dataDir = server.getServerDirectory().toPath().resolve(DATA_DIR);
 
         this.provider = new ColonyDataProvider(server);
+        this.maps = new ColonyMapService(cache, provider);
         this.auth = new AuthService(dataDir);
         this.vanillaAssets = new VanillaAssetProvider(ASSET_VERSION, dataDir);
 
         TextureService textures = new TextureService(dataDir, vanillaAssets);
-        this.webServer = new WebServer(Config.bindAddress, Config.httpPort, cache, textures, broadcaster, auth);
-        this.scheduler = new ColonyRefreshScheduler(server, provider, cache, broadcaster, auth);
+        this.webServer = new WebServer(Config.bindAddress, Config.httpPort, cache, maps, textures,
+                broadcaster, auth);
+        this.scheduler = new ColonyRefreshScheduler(server, provider, cache, maps, broadcaster, auth);
     }
 
     public static ColonyWebService get() {
@@ -89,6 +93,7 @@ public final class ColonyWebService {
     private void stopInternal() {
         scheduler.stop();
         webServer.stop();
+        maps.stop();
     }
 
     // ------------------------------------------------------------------

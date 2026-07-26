@@ -3,10 +3,12 @@ package DahRealPanda.plugins.colonyweb.web;
 import DahRealPanda.plugins.colonyweb.ColonyWeb;
 import DahRealPanda.plugins.colonyweb.auth.AuthService;
 import DahRealPanda.plugins.colonyweb.colony.ColonyCache;
+import DahRealPanda.plugins.colonyweb.map.ColonyMapService;
 import DahRealPanda.plugins.colonyweb.texture.TextureService;
 import DahRealPanda.plugins.colonyweb.web.handlers.ApiHandler;
 import DahRealPanda.plugins.colonyweb.web.handlers.AuthHandler;
 import DahRealPanda.plugins.colonyweb.web.handlers.EventsHandler;
+import DahRealPanda.plugins.colonyweb.web.handlers.MapHandler;
 import DahRealPanda.plugins.colonyweb.web.handlers.StaticHandler;
 import DahRealPanda.plugins.colonyweb.web.handlers.TextureHandler;
 import com.mojang.logging.LogUtils;
@@ -35,17 +37,19 @@ public final class WebServer {
     private final String bindAddress;
     private final int port;
     private final ColonyCache cache;
+    private final ColonyMapService maps;
     private final TextureService textureService;
     private final SseBroadcaster broadcaster;
     private final AuthService auth;
 
     private HttpServer server;
 
-    public WebServer(String bindAddress, int port, ColonyCache cache, TextureService textureService,
-                     SseBroadcaster broadcaster, AuthService auth) {
+    public WebServer(String bindAddress, int port, ColonyCache cache, ColonyMapService maps,
+                     TextureService textureService, SseBroadcaster broadcaster, AuthService auth) {
         this.bindAddress = bindAddress;
         this.port = port;
         this.cache = cache;
+        this.maps = maps;
         this.textureService = textureService;
         this.broadcaster = broadcaster;
         this.auth = auth;
@@ -54,9 +58,10 @@ public final class WebServer {
     public void start() throws IOException {
         server = HttpServer.create(new InetSocketAddress(bindAddress, port), 0);
         server.createContext("/auth/", new AuthHandler(auth));
-        server.createContext("/api/", new ApiHandler(cache, auth));
+        server.createContext("/api/", new ApiHandler(cache, maps, auth));
         server.createContext("/events", new EventsHandler(broadcaster, auth));
         server.createContext("/textures/", new TextureHandler(textureService, auth));
+        server.createContext("/map/", new MapHandler(maps, auth));
         server.createContext("/", new StaticHandler());
 
         server.setExecutor(Executors.newFixedThreadPool(HTTP_THREADS, namedFactory()));
