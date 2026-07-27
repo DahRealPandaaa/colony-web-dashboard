@@ -30,6 +30,7 @@ public class ColonySnapshot {
     /** A single aggregated stack in the warehouse. */
     public static class Stack extends ItemInfo {
         public int count;
+        public int maxStackSize; // maximum items per stack for this specific item
 
         public Stack() {
         }
