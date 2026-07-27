@@ -1,0 +1,60 @@
+plugins {
+    id 'eclipse'
+    id 'idea'
+    id 'net.neoforged.moddev' version '2.0.142'
+}
+
+// Identity, source sets, resource templating and the LDTTeam repository.
+apply from: "$rootDir/gradle/mod-common.gradle"
+
+neoForge {
+    version = neoforge_version
+
+    // NeoForge runs on Mojang's official names, the same mappings the 1.20.1 project maps to,
+    // which is what lets common/ compile against both without a preprocessor. There is also no
+    // reobfuscation step here for the same reason.
+
+    mods {
+        "${mod_id}" {
+            sourceSet sourceSets.main
+        }
+    }
+
+    runs {
+        client {
+            client()
+            // Keep the integrated-client world separate from the dedicated server so both
+            // development sessions can run at the same time.
+            gameDirectory = project.file('run-client')
+        }
+
+        server {
+            server()
+            gameDirectory = project.file('run-server')
+            programArgument '--nogui'
+        }
+
+        data {
+            clientData()
+            gameDirectory = project.file('run-data')
+        }
+    }
+}
+
+dependencies {
+    // Load MineColonies and its mandatory support mods in runClient/runServer. ColonyWeb still
+    // integrates through reflection, so these stay off the compile classpath and are not bundled
+    // in the published ColonyWeb jar.
+    //
+    // Declared one by one, and non-transitively, because MineColonies' POM also pulls in JEI and
+    // a 1.20.4 datagenerators artifact that a 1.21.1 dev runtime has no use for.
+    runtimeOnly("com.ldtteam:minecolonies:${minecolonies_version}") { transitive = false }
+    runtimeOnly("com.ldtteam:structurize:${structurize_version}") { transitive = false }
+    runtimeOnly("com.ldtteam:blockui:${blockui_version}") { transitive = false }
+    runtimeOnly("com.ldtteam:multipiston:${multipiston_version}") { transitive = false }
+    // 1.21 renamed the artifact from domum_ornamentum to domum-ornamentum and dropped the
+    // universal classifier the 1.20.1 build needs.
+    runtimeOnly("com.ldtteam:domum-ornamentum:${domum_version}") { transitive = false }
+    //
+    // Additional optional mods can still be dropped into the selected run directory's mods folder.
+}
