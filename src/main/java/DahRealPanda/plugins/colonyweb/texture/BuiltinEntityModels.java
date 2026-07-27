@@ -97,6 +97,11 @@ public final class BuiltinEntityModels {
      * become the bed's top and underside — hence the hand-written face mapping rather than
      * {@link #entityBox}. Drawn at half size, because a real bed is two blocks long and would
      * not fit the icon's single-block frame.</p>
+     *
+     * <p>The halves are mirror images of each other, which decides two things that are easy to
+     * get backwards: the head's outer end is its box's <em>down</em> face while the foot's is
+     * its box's <em>up</em> face (the two ends that meet in the middle are left blank in the
+     * texture), and the ends are drawn frame-first, so their {@code v} runs bottom to top.</p>
      */
     private static BlockModel bed(String colour) {
         BlockModel model = new BlockModel();
@@ -107,18 +112,18 @@ public final class BuiltinEntityModels {
         BlockModel.Element head = box(BED_X0, BED_LEG_TOP, BED_Z0, BED_X1, BED_TOP, BED_Z_MID);
         head.faces.put("up", tex.face(6, 6, 22, 22));
         head.faces.put("down", tex.face(28, 6, 44, 22));
-        head.faces.put("north", tex.face(6, 0, 22, 6));
-        head.faces.put("west", tex.face(0, 6, 6, 22));
-        head.faces.put("east", tex.face(22, 6, 28, 22));
+        head.faces.put("north", tex.face(6, 6, 22, 0));
+        head.faces.put("west", turned(tex.face(0, 6, 6, 22), 270));
+        head.faces.put("east", turned(tex.face(22, 6, 28, 22), 90));
         model.elements.add(head);
 
         // Foot half — vanilla texOffs(0, 22).
         BlockModel.Element foot = box(BED_X0, BED_LEG_TOP, BED_Z_MID, BED_X1, BED_TOP, BED_Z1);
         foot.faces.put("up", tex.face(6, 28, 22, 44));
         foot.faces.put("down", tex.face(28, 28, 44, 44));
-        foot.faces.put("south", tex.face(6, 22, 22, 28));
-        foot.faces.put("west", tex.face(0, 28, 6, 44));
-        foot.faces.put("east", tex.face(22, 28, 28, 44));
+        foot.faces.put("south", tex.face(22, 28, 38, 22));
+        foot.faces.put("west", turned(tex.face(0, 28, 6, 44), 270));
+        foot.faces.put("east", turned(tex.face(22, 28, 28, 44), 90));
         model.elements.add(foot);
 
         // Legs. All four take the same scrap of wood from the texture's right-hand column; at
@@ -359,6 +364,20 @@ public final class BuiltinEntityModels {
         for (BlockModel.Face face : element.faces.values()) {
             face.tint = colour;
         }
+    }
+
+    /**
+     * Quarter-turns a face's texture, for a box that is laid on its side.
+     *
+     * <p>The bed's mattress halves are 16x16x6 boxes tipped over, so their long faces take a
+     * strip whose short axis runs across the mattress's thickness and whose long axis runs down
+     * the bed. Left alone the renderer maps those the other way round and smears the blanket
+     * along the side. The two sides are mirror images in the texture — the frame is at the
+     * strip's near edge on one and its far edge on the other — so they turn opposite ways.</p>
+     */
+    private static BlockModel.Face turned(BlockModel.Face face, int degrees) {
+        face.rotation = degrees;
+        return face;
     }
 
     /** Turn every element about the block's vertical centre line. */
