@@ -6,6 +6,7 @@ on:
     branches: [main]
 
 permissions:
+  actions: read
   contents: read
 
 # Superseded runs are useless, so drop them when new commits arrive.
