@@ -1,6 +1,7 @@
 name: Build & Release
 
-# Runs on every push to main, which includes merged pull requests.
+# Runs on every push to main, which includes merged pull requests. One release carries one jar per
+# supported Minecraft version.
 on:
   push:
     branches: [main]
@@ -35,13 +36,31 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  release:
+  # Which Minecraft versions exist is a property of the versions/ directory, not of this file, so
+  # adding one never means editing a workflow.
+  targets:
+    name: Resolve build targets
     if: github.ref == 'refs/heads/main'
-    name: Build and publish mod jar
     runs-on: ubuntu-latest
-    # A cold ForgeGradle run decompiles Minecraft and takes ~20 minutes; anything
-    # past an hour is hung rather than slow.
-    timeout-minutes: 60
+    outputs:
+      matrix: ${{ steps.targets.outputs.matrix }}
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+
+      - name: Discover build targets
+        id: targets
+        uses: ./.github/actions/build-targets
+
+  # Version resolution needs git history and the GitHub API, but no JDK and no Minecraft, so it
+  # runs once and in parallel with nothing else — every target ships under the same version.
+  version:
+    name: Resolve release version
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+      prerelease: ${{ steps.version.outputs.prerelease }}
 
     steps:
       - name: Check out repository
@@ -49,14 +68,6 @@ jobs:
         with:
           # Full history so the version steps can see every existing v* tag.
           fetch-depth: 0
-
-      # cache-read-only is false here: main is the only branch allowed to
-      # populate the shared caches that every pull request build reads.
-      - name: Set up build environment
-        id: build-env
-        uses: ./.github/actions/gradle-build-env
-        with:
-          cache-read-only: 'false'
 
       # Which part of the version to raise, highest precedence first:
       #   1. an exact "version" input on a manual run — no bump level needed
@@ -224,43 +235,107 @@ jobs:
             prerelease=true
           fi
 
-          sed -i -E "s|^mod_version=.*|mod_version=${next}|" gradle.properties
           echo "version=${next}" >> "$GITHUB_OUTPUT"
           echo "prerelease=${prerelease}" >> "$GITHUB_OUTPUT"
           echo "Releasing v${next} (prerelease=${prerelease}), was ${current}"
 
+  build:
+    name: Build ${{ matrix.version }}
+    needs: [targets, version]
+    runs-on: ubuntu-latest
+    # A cold decompile of Minecraft takes ~20 minutes; anything past an hour is hung rather
+    # than slow.
+    timeout-minutes: 60
+    strategy:
+      # A release with a jar missing is worse than a release that fails outright, but seeing
+      # which targets broke is worth more than stopping at the first one.
+      fail-fast: false
+      matrix:
+        include: ${{ fromJSON(needs.targets.outputs.matrix) }}
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+
+      # cache-read-only is false here: main is the only branch allowed to
+      # populate the shared caches that every pull request build reads.
+      - name: Set up build environment
+        id: build-env
+        uses: ./.github/actions/gradle-build-env
+        with:
+          version: ${{ matrix.version }}
+          java-version: ${{ matrix.java }}
+          toolchain-cache-path: ${{ matrix.cache }}
+          cache-read-only: 'false'
+
+      # The version is passed in rather than written into gradle.properties: one -P override
+      # reaches every target, and the release commit is never pushed back anyway.
+      #
+      # -PmcVersions keeps Gradle from even configuring the other targets, whose toolchain
+      # plugins want a different JDK from the one this job installed.
       - name: Build
-        run: ./gradlew build --no-daemon --stacktrace
+        run: >-
+          ./gradlew :versions:${{ matrix.version }}:build
+          -PmcVersions=${{ matrix.version }}
+          -Pmod_version=${{ needs.version.outputs.version }}
+          --no-daemon --stacktrace
 
       # Only main writes this one, and only when the restore missed. The path
       # must stay in step with the restore in .github/actions/gradle-build-env.
-      - name: Save ForgeGradle cache
-        if: steps.build-env.outputs.forge-cache-hit != 'true'
+      - name: Save toolchain cache
+        if: steps.build-env.outputs.toolchain-cache-hit != 'true'
         uses: actions/cache/save@v6
         with:
-          path: ~/.gradle/caches/forge_gradle
-          key: ${{ steps.build-env.outputs.forge-cache-key }}
-
-      - name: Create release
-        env:
-          GH_TOKEN: ${{ github.token }}
-          VERSION: ${{ steps.version.outputs.version }}
-          PRERELEASE: ${{ steps.version.outputs.prerelease }}
-        run: |
-          set -euo pipefail
-          flags=()
-          if [[ "$PRERELEASE" == true ]]; then
-            flags+=(--prerelease)
-          fi
-          gh release create "v${VERSION}" build/libs/*.jar \
-            --title "v${VERSION}" \
-            --target "${GITHUB_SHA}" \
-            --generate-notes \
-            "${flags[@]}"
+          path: ${{ matrix.cache }}
+          key: ${{ steps.build-env.outputs.toolchain-cache-key }}
 
       - name: Upload mod jar
         uses: actions/upload-artifact@v7
         with:
-          name: colonyweb-jar
-          path: build/libs/*.jar
+          name: jars-${{ matrix.version }}
+          path: versions/${{ matrix.version }}/build/libs/*.jar
           if-no-files-found: error
+
+  # One tag, one release, every version's jar attached to it.
+  release:
+    name: Publish release
+    needs: [version, build]
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+
+      - name: Collect every version's jar
+        uses: actions/download-artifact@v7
+        with:
+          pattern: jars-*
+          merge-multiple: true
+          path: dist
+
+      - name: Create release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ needs.version.outputs.version }}
+          PRERELEASE: ${{ needs.version.outputs.prerelease }}
+        run: |
+          set -euo pipefail
+
+          # An empty dist would otherwise publish a release with nothing to download.
+          count=$(find dist -name '*.jar' | wc -l)
+          if (( count == 0 )); then
+            echo "::error::no jars were built"
+            exit 1
+          fi
+          echo "Attaching ${count} jar(s):"
+          find dist -name '*.jar' -printf '  %f\n'
+
+          flags=()
+          if [[ "$PRERELEASE" == true ]]; then
+            flags+=(--prerelease)
+          fi
+          gh release create "v${VERSION}" dist/*.jar \
+            --title "v${VERSION}" \
+            --target "${GITHUB_SHA}" \
+            --generate-notes \
+            "${flags[@]}"
