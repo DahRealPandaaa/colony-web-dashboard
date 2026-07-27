@@ -41,10 +41,18 @@ public final class BuiltinEntityModels {
      * @return the geometry to rasterize, or empty for every other item
      */
     public static Optional<BlockModel> forItem(String namespace, String path) {
-        if (!"minecraft".equals(namespace) || path == null) {
+        if (path == null) {
             return Optional.empty();
         }
         String id = path.toLowerCase(Locale.ROOT);
+        // MineColonies' colony flag inherits item/template_banner, so it lands on the same empty
+        // geometry as a vanilla banner and used to show that template's oak plank particle.
+        if ("minecolonies".equals(namespace)) {
+            return "colony_banner".equals(id) ? Optional.of(banner(null)) : Optional.empty();
+        }
+        if (!"minecraft".equals(namespace)) {
+            return Optional.empty();
+        }
         return switch (id) {
             case "shield" -> Optional.of(shield());
             case "conduit" -> Optional.of(conduit());
@@ -252,9 +260,15 @@ public final class BuiltinEntityModels {
         BlockModel.Element cloth = box(8 - barW, top - 42 * scale, 9 - poleW - scale,
                 8 + barW, top - 2 * scale, 9 - poleW);
         entityBox(cloth, tex, 0, 0, 20, 40, 1);
-        tint(cloth, DYE.getOrDefault(colour, 0xFFFFFF));
+        tint(cloth, dye(colour));
         model.elements.add(cloth);
         return model;
+    }
+
+    /** A dye's cloth colour, falling back to white for an undyed banner such as a colony flag. */
+    private static int dye(String colour) {
+        Integer rgb = colour == null ? null : DYE.get(colour);
+        return rgb == null ? 0xFFFFFF : rgb;
     }
 
     // ------------------------------------------------------------------

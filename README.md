@@ -202,6 +202,8 @@ the game shows for a Domum Ornamentum block:
   same applies to **chests** (normal, trapped, ender), **shulker boxes**, **banners** and the
   **conduit**. Banners carry their dye as an explicit tint, since all 16 share one white base
   texture; their NBT patterns are not drawn, because an icon keyed by item alone cannot see them.
+  MineColonies' **colony flag banner** inherits the same empty vanilla banner model, so it is
+  drawn with that geometry too, undyed and without its colony emblem.
 - **Domum Ornamentum blocks** go one step further: each material component's texture is
   substituted into the model's texture variables first, so a *Brick Extra Shingle* looks like a
   shingle made of brick rather than a flat brick square. If a model cannot be parsed it falls
