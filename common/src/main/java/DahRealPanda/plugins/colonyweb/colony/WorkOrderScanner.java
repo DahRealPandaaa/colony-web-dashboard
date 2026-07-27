@@ -99,7 +99,11 @@ public final class WorkOrderScanner {
         BlockPos claimedBy = Scan.blockPosOf(firstNonNull(
                 invoke(workOrder, "getClaimedBy").orElse(null),
                 invoke(workOrder, "getClaimedByBuilding").orElse(null)));
-        if (claimedBy == null) {
+        // An order still in the queue is not claimed by anyone. MineColonies signals that with
+        // the origin rather than null — its own AbstractWorkOrder.isClaimed() is exactly
+        // "claimedBy != BlockPos.ZERO" — so the origin has to be filtered out here too, or every
+        // queued order ends up attributed to a builder that does not exist.
+        if (claimedBy == null || BlockPos.ZERO.equals(claimedBy)) {
             return;
         }
         Object builderBuilding = ctx.rawBuildingByPos.get(claimedBy);

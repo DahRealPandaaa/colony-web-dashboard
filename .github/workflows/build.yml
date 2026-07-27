@@ -26,6 +26,9 @@ on:
         default: ''
 
 permissions:
+  # actions: write is what lets the toolchain cache be saved; contents: write
+  # is what lets the release be created.
+  actions: write
   contents: write
 
 # A release must never be cancelled halfway, or a tag ends up without a release.

@@ -7,6 +7,9 @@ on:
     branches: [main]
 
 permissions:
+  # actions: read is what lets the toolchain cache be restored. A pull request
+  # never writes one back, so read is all it needs.
+  actions: read
   contents: read
 
 # Superseded runs are useless, so drop them when new commits arrive.
