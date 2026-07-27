@@ -35,7 +35,7 @@
                         </template>
                         <div class="mc-line" x-show="!s.domum" x-text="s.itemKey.split('#')[0]"></div>
                     </div>
-                    <div class="mc-count" x-text="'x' + num(s.count)"></div>
+                    <div class="mc-count" x-text="stacks(s.count, s.maxStackSize)"></div>
                 </div>
             </template>
         </div>

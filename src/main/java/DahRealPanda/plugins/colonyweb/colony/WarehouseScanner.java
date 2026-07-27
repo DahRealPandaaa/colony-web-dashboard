@@ -59,6 +59,7 @@ public final class WarehouseScanner {
         ColonySnapshot.Stack aggregate = byKey.get(key);
         if (aggregate == null) {
             aggregate = Scan.fillItem(new ColonySnapshot.Stack(), stack);
+            aggregate.maxStackSize = Math.max(1, stack.getMaxStackSize());
             byKey.put(key, aggregate);
             warehouse.stacks.add(aggregate);
         }
