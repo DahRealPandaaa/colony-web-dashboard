@@ -112,6 +112,9 @@ public final class TextureService {
      * {@link ModelResolver#resolveTexture} can do) turns every one of those into a flat swatch
      * of the wrong thing.</p>
      *
+     * <p>Beds and shields are asked about first: their models are deliberately empty because the
+     * game draws them from Java, so only {@link BuiltinEntityModels} has geometry for them.</p>
+     *
      * @return null when the item has no geometry to draw, so the caller keeps the flat texture
      */
     private byte[] renderInventoryIcon(String registryName) {
@@ -120,7 +123,8 @@ public final class TextureService {
             if (rl == null) {
                 return null;
             }
-            Optional<BlockModel> resolved = modelResolver.resolveInventoryModel(rl.getNamespace(), rl.getPath());
+            Optional<BlockModel> resolved = BuiltinEntityModels.forItem(rl.getNamespace(), rl.getPath())
+                    .or(() -> modelResolver.resolveInventoryModel(rl.getNamespace(), rl.getPath()));
             if (resolved.isEmpty()) {
                 return null;
             }
