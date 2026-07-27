@@ -540,14 +540,15 @@ The client reacts by re-fetching `/api/colonies` and/or the current `/api/colony
             { "id": "domum_ornamentum:shingle_face", "label": "Main Material",
               "material": "Brick Extra", "itemKey": "domum_ornamentum:brick_extra" }
           ],
-          "needed": 18, "inHut": 0, "inWarehouse": 64, "deliverable": true }
+          "needed": 18, "maxStackSize": 64, "inHut": 0, "inWarehouse": 64, "deliverable": true }
       ]
     }
   ],
   "warehouse": {
     "present": true,
     "stacks": [ { "itemKey": "minecraft:oak_planks", "name": "Oak Planks",
-                  "material": null, "domum": false, "components": [], "count": 512 } ]
+                  "material": null, "domum": false, "components": [],
+                  "count": 512, "maxStackSize": 64 } ]
   },
   "stats": {
     "citizens": 24, "maxCitizens": 30, "children": 3, "unemployed": 2,
@@ -643,6 +644,8 @@ Key fields:
 - `*.components[]` — per-material tooltip lines for Domum blocks (`label`, `material`,
   `itemKey`); empty for ordinary items.
 - `required[].deliverable` — the warehouse can cover the shortfall.
+- `*.maxStackSize` — that item's stack limit, so counts can be shown as stacks plus a
+  remainder (`140` at `64` becomes `2 stacks + 12`).
 - `*.craftable` — a colony worker knows a recipe that produces this item.
 - `guards[].armorTierRank` — rising with material quality, so the roster sorts without
   needing to know the tier names.
