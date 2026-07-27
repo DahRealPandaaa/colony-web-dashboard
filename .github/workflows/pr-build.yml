@@ -23,7 +23,7 @@ jobs:
 
     steps:
       - name: Check out repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       # cache-read-only: pull requests read the caches main populates but never
       # write per-branch copies of a 1.5 GB ForgeGradle cache back.
@@ -37,7 +37,7 @@ jobs:
 
       # Lets a reviewer drop the jar straight into a test instance.
       - name: Upload mod jar
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: colonyweb-jar-pr-${{ github.event.pull_request.number }}
           path: build/libs/*.jar

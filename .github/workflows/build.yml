@@ -45,7 +45,7 @@ jobs:
 
     steps:
       - name: Check out repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           # Full history so the version steps can see every existing v* tag.
           fetch-depth: 0
@@ -236,7 +236,7 @@ jobs:
       # must stay in step with the restore in .github/actions/gradle-build-env.
       - name: Save ForgeGradle cache
         if: steps.build-env.outputs.forge-cache-hit != 'true'
-        uses: actions/cache/save@v4
+        uses: actions/cache/save@v6
         with:
           path: ~/.gradle/caches/forge_gradle
           key: ${{ steps.build-env.outputs.forge-cache-key }}
@@ -259,7 +259,7 @@ jobs:
             "${flags[@]}"
 
       - name: Upload mod jar
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: colonyweb-jar
           path: build/libs/*.jar
