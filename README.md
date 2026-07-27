@@ -195,6 +195,15 @@ the game shows for a Domum Ornamentum block:
   vanilla face shading, cut-out geometry preserved) — no client, no OpenGL.
 - Faces with a `tintindex` (grass, leaves) are coloured with the temperate grass/foliage green;
   their textures ship greyscale and would otherwise render bone white.
+- **Beds and shields** ship item models with no geometry at all — the game draws them from Java
+  (`BedRenderer`, `ShieldModel`) using the textures under `textures/entity/`. Their models are
+  re-declared as cuboids with explicit UVs into those entity textures, so a bed renders as a
+  bed instead of a square of wool and a shield as a shield instead of a square of planks. The
+  same applies to **chests** (normal, trapped, ender), **shulker boxes**, **banners** and the
+  **conduit**. Banners carry their dye as an explicit tint, since all 16 share one white base
+  texture; their NBT patterns are not drawn, because an icon keyed by item alone cannot see them.
+  MineColonies' **colony flag banner** inherits the same empty vanilla banner model, so it is
+  drawn with that geometry too, undyed and without its colony emblem.
 - **Domum Ornamentum blocks** go one step further: each material component's texture is
   substituted into the model's texture variables first, so a *Brick Extra Shingle* looks like a
   shingle made of brick rather than a flat brick square. If a model cannot be parsed it falls

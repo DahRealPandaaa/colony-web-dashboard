@@ -104,7 +104,7 @@ public final class IsometricRenderer {
         if (uv == null) {
             return false;
         }
-        double[] shade = shadeFor(direction, face.tintIndex);
+        double[] shade = shadeFor(direction, face);
 
         // Quad corners at parametric (s,t) = (0,0) (1,0) (1,1) (0,1) across the face.
         double[][] pos = new double[4][];
@@ -166,20 +166,22 @@ public final class IsometricRenderer {
     }
 
     /** Per-channel multiplier for a face: vanilla's directional shading, times any tint. */
-    private static double[] shadeFor(String direction, int tintIndex) {
+    private static double[] shadeFor(String direction, BlockModel.Face face) {
         double shade = switch (direction) {
             case "up" -> SHADE_UP;
             case "down" -> SHADE_DOWN;
             case "north", "south" -> SHADE_NS;
             default -> SHADE_EW;
         };
-        if (tintIndex < 0) {
+        // An explicit colour wins; a bare tint index only says "something colours this".
+        int tint = face.tint >= 0 ? face.tint : (face.tintIndex >= 0 ? DEFAULT_TINT : -1);
+        if (tint < 0) {
             return new double[]{shade, shade, shade};
         }
         return new double[]{
-                shade * ((DEFAULT_TINT >> 16) & 0xFF) / 255.0,
-                shade * ((DEFAULT_TINT >> 8) & 0xFF) / 255.0,
-                shade * (DEFAULT_TINT & 0xFF) / 255.0,
+                shade * ((tint >> 16) & 0xFF) / 255.0,
+                shade * ((tint >> 8) & 0xFF) / 255.0,
+                shade * (tint & 0xFF) / 255.0,
         };
     }
 

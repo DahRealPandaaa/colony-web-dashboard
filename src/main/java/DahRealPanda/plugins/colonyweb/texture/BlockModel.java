@@ -91,6 +91,16 @@ public final class BlockModel {
          * that declares a tint index must be multiplied by a colour or it renders bone white.</p>
          */
         public int tintIndex = -1;
+
+        /**
+         * An explicit {@code 0xRRGGBB} to multiply this face by, or -1 to leave it alone.
+         *
+         * <p>Separate from {@link #tintIndex} because the two answer different questions.
+         * A tint index means "the game picks a colour here", which for a cached icon can only
+         * be guessed at. This is the colour itself, known up front — all 16 banners share one
+         * white base texture and differ only by their dye.</p>
+         */
+        public int tint = -1;
     }
 
     /** Optional per-element rotation about one axis. */
