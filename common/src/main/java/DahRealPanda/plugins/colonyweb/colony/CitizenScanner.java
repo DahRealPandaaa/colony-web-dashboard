@@ -9,7 +9,8 @@ import com.mojang.logging.LogUtils;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.item.ItemStack;
-import net.minecraftforge.items.IItemHandler;
+import DahRealPanda.plugins.colonyweb.platform.ItemSlots;
+import DahRealPanda.plugins.colonyweb.platform.Platform;
 import org.slf4j.Logger;
 
 import java.util.ArrayList;
@@ -275,7 +276,8 @@ public final class CitizenScanner {
     private List<ItemCount> readInventory(Object citizen, CitizenInfo info) {
         List<ItemCount> out = new ArrayList<>();
         Object inventory = invokeAny(citizen, "getInventory").orElse(null);
-        if (!(inventory instanceof IItemHandler handler)) {
+        ItemSlots handler = Platform.get().asItemSlots(inventory).orElse(null);
+        if (handler == null) {
             return out;
         }
         info.inventorySize = handler.getSlots();

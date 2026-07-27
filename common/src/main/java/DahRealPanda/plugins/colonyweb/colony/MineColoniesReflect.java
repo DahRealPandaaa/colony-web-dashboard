@@ -1,7 +1,7 @@
 package DahRealPanda.plugins.colonyweb.colony;
 
+import DahRealPanda.plugins.colonyweb.platform.Platform;
 import com.mojang.logging.LogUtils;
-import net.minecraftforge.fml.ModList;
 import org.slf4j.Logger;
 
 import java.lang.reflect.Field;
@@ -35,7 +35,7 @@ public final class MineColoniesReflect {
         if (loaded == null) {
             boolean present;
             try {
-                present = ModList.get() != null && ModList.get().isLoaded("minecolonies");
+                present = Platform.get().isModLoaded("minecolonies");
             } catch (Throwable t) {
                 present = false;
             }

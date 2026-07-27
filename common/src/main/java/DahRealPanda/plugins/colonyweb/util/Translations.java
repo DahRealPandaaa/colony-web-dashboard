@@ -3,8 +3,8 @@ package DahRealPanda.plugins.colonyweb.util;
 import com.google.gson.Gson;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
+import DahRealPanda.plugins.colonyweb.platform.Platform;
 import com.mojang.logging.LogUtils;
-import net.minecraftforge.fml.ModList;
 import org.slf4j.Logger;
 
 import java.io.InputStream;
@@ -149,9 +149,9 @@ public final class Translations {
 
     private static Iterable<String> modIds() {
         try {
-            return ModList.get().getMods().stream().map(mod -> mod.getModId()).toList();
+            return Platform.get().loadedModIds();
         } catch (Throwable t) {
-            // Called before the mod list exists (or outside Forge entirely) — the two that
+            // Called before the mod list exists (or outside a loader entirely) — the two that
             // matter are worth trying anyway.
             return java.util.List.of("minecolonies", "domum_ornamentum");
         }

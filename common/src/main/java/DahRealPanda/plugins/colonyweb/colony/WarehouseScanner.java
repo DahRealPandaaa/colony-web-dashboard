@@ -1,13 +1,13 @@
 package DahRealPanda.plugins.colonyweb.colony;
 
 import DahRealPanda.plugins.colonyweb.colony.model.ColonySnapshot;
+import DahRealPanda.plugins.colonyweb.platform.ItemSlots;
+import DahRealPanda.plugins.colonyweb.platform.Platform;
 import DahRealPanda.plugins.colonyweb.texture.DomumOrnamentumResolver;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.entity.BlockEntity;
-import net.minecraftforge.common.capabilities.ForgeCapabilities;
-import net.minecraftforge.items.IItemHandler;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -44,7 +44,7 @@ public final class WarehouseScanner {
     /** Add one warehouse building's contents to the snapshot. */
     public void addWarehouse(ServerLevel level, Object building, BlockPos hutPos,
                              ColonySnapshot.Warehouse warehouse) {
-        for (IItemHandler handler : rackInventories(level, building, hutPos)) {
+        for (ItemSlots handler : rackInventories(level, building, hutPos)) {
             for (int slot = 0; slot < handler.getSlots(); slot++) {
                 ItemStack stack = handler.getStackInSlot(slot);
                 if (stack != null && !stack.isEmpty()) {
@@ -70,11 +70,12 @@ public final class WarehouseScanner {
      * The item handlers backing a warehouse: its registered racks, or the hut block itself
      * when no containers are registered.
      */
-    private List<IItemHandler> rackInventories(ServerLevel level, Object building, BlockPos hutPos) {
-        List<IItemHandler> handlers = new ArrayList<>();
+    private List<ItemSlots> rackInventories(ServerLevel level, Object building, BlockPos hutPos) {
+        List<ItemSlots> handlers = new ArrayList<>();
         if (level == null) {
             return handlers;
         }
+        Platform platform = Platform.get();
         for (BlockPos pos : containerPositions(building, hutPos)) {
             if (!countedContainers.add(pos)) {
                 continue;
@@ -87,11 +88,9 @@ public final class WarehouseScanner {
             }
             // Read the rack's OWN inventory, not its capability (see the class comment).
             Object ownInventory = invoke(blockEntity, "getInventory").orElse(null);
-            if (ownInventory instanceof IItemHandler handler) {
-                handlers.add(handler);
-            } else {
-                blockEntity.getCapability(ForgeCapabilities.ITEM_HANDLER).ifPresent(handlers::add);
-            }
+            platform.asItemSlots(ownInventory)
+                    .or(() -> platform.itemSlots(blockEntity))
+                    .ifPresent(handlers::add);
         }
         return handlers;
     }

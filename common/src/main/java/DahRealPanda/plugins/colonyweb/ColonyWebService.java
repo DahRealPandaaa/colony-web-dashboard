@@ -4,6 +4,7 @@ import DahRealPanda.plugins.colonyweb.auth.AuthService;
 import DahRealPanda.plugins.colonyweb.colony.ColonyCache;
 import DahRealPanda.plugins.colonyweb.colony.ColonyDataProvider;
 import DahRealPanda.plugins.colonyweb.map.ColonyMapService;
+import DahRealPanda.plugins.colonyweb.platform.Platform;
 import DahRealPanda.plugins.colonyweb.service.ColonyRefreshScheduler;
 import DahRealPanda.plugins.colonyweb.texture.TextureService;
 import DahRealPanda.plugins.colonyweb.texture.VanillaAssetProvider;
@@ -25,9 +26,6 @@ import java.util.concurrent.CompletableFuture;
 public final class ColonyWebService {
     private static final Logger LOGGER = LogUtils.getLogger();
 
-    /** The Minecraft version whose client assets back vanilla item icons. */
-    private static final String ASSET_VERSION = "1.20.1";
-
     /** Everything the mod persists lives here, under the server directory. */
     private static final String DATA_DIR = "colonyweb";
 
@@ -43,12 +41,15 @@ public final class ColonyWebService {
     private final ColonyRefreshScheduler scheduler;
 
     private ColonyWebService(MinecraftServer server) {
-        Path dataDir = server.getServerDirectory().toPath().resolve(DATA_DIR);
+        Platform platform = Platform.get();
+        Path dataDir = platform.serverDataDir(server, DATA_DIR);
 
         this.provider = new ColonyDataProvider(server);
         this.maps = new ColonyMapService(cache, provider);
         this.auth = new AuthService(dataDir);
-        this.vanillaAssets = new VanillaAssetProvider(ASSET_VERSION, dataDir);
+        // The client assets backing vanilla item icons must match the Minecraft version we are
+        // running on, so the version comes from the platform rather than a constant here.
+        this.vanillaAssets = new VanillaAssetProvider(platform.minecraftVersion(), dataDir);
 
         TextureService textures = new TextureService(dataDir, vanillaAssets);
         this.webServer = new WebServer(Config.bindAddress, Config.httpPort, cache, maps, textures,

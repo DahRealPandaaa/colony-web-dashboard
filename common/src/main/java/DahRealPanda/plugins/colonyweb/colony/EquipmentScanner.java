@@ -1,9 +1,9 @@
 package DahRealPanda.plugins.colonyweb.colony;
 
 import DahRealPanda.plugins.colonyweb.colony.model.EquipmentInfo;
+import DahRealPanda.plugins.colonyweb.platform.Platform;
 import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.entity.LivingEntity;
-import net.minecraft.world.item.ArmorItem;
 import net.minecraft.world.item.ItemStack;
 
 import java.util.ArrayList;
@@ -82,9 +82,7 @@ public final class EquipmentScanner {
         info.slot = slotName;
         info.enchanted = stack.isEnchanted();
 
-        if (stack.getItem() instanceof ArmorItem armor) {
-            info.armorPoints = armor.getDefense();
-        }
+        info.armorPoints = Platform.get().armorPoints(stack);
         if (stack.isDamageableItem() && stack.getMaxDamage() > 0) {
             info.durabilityPct = (int) Math.round(
                     100.0 * (stack.getMaxDamage() - stack.getDamageValue()) / stack.getMaxDamage());

@@ -2,13 +2,14 @@ package DahRealPanda.plugins.colonyweb.texture;
 
 import DahRealPanda.plugins.colonyweb.colony.MineColoniesReflect;
 import DahRealPanda.plugins.colonyweb.colony.model.MaterialComponent;
+import DahRealPanda.plugins.colonyweb.platform.Platform;
+import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.Tag;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.BlockItem;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.Block;
-import net.minecraftforge.registries.ForgeRegistries;
 
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
@@ -25,10 +26,12 @@ import java.util.concurrent.ConcurrentHashMap;
  * Resolves Domum Ornamentum textured blocks to a stable texture key and to the individual
  * material components that make them up.
  *
- * <p>DO stores its material components in stack NBT at {@code BlockEntityTag → textureData},
- * a compound mapping each component id to a block registry name (e.g. {@code minecraft:...}).
- * Because two DO stacks with the same item id can look completely different, the texture key
- * includes an 8-char NBT hash so each variant caches to its own PNG.</p>
+ * <p>DO stores its material components in the stack's block-entity data at {@code BlockEntityTag →
+ * textureData} (1.20.5 and later: the {@code block_entity_data} component), a compound mapping
+ * each component id to a block registry name (e.g. {@code minecraft:...}). Because two DO stacks
+ * with the same item id can look completely different, the texture key includes an 8-char hash of
+ * that data so each variant caches to its own PNG. Where the data lives is the platform's problem
+ * — see {@link DahRealPanda.plugins.colonyweb.platform.Platform#blockEntityData}.</p>
  *
  * <p>The per-variant component map recorded here is what lets {@link IsometricRenderer} draw
  * the block's real geometry with its real materials, instead of falling back to a flat swatch
@@ -62,7 +65,7 @@ public final class DomumOrnamentumResolver {
 
     /** @return true when the stack is a Domum Ornamentum item. */
     public static boolean isDomum(ItemStack stack) {
-        ResourceLocation rl = ForgeRegistries.ITEMS.getKey(stack.getItem());
+        ResourceLocation rl = BuiltInRegistries.ITEM.getKey(stack.getItem());
         return rl != null && DO_NAMESPACE.equals(rl.getNamespace());
     }
 
@@ -76,10 +79,11 @@ public final class DomumOrnamentumResolver {
      * {@code #<8charHash>} suffix so distinct textured variants map to distinct PNGs.
      */
     public static String textureKeyFor(ItemStack stack) {
-        ResourceLocation rl = ForgeRegistries.ITEMS.getKey(stack.getItem());
+        ResourceLocation rl = BuiltInRegistries.ITEM.getKey(stack.getItem());
         String base = rl != null ? rl.toString() : "minecraft:air";
-        if (isDomum(stack) && stack.hasTag()) {
-            String hash = hash8(String.valueOf(stack.getTag()));
+        String fingerprint = isDomum(stack) ? Platform.get().dataFingerprint(stack) : null;
+        if (fingerprint != null) {
+            String hash = hash8(fingerprint);
             if (hash != null) {
                 String key = base + "#" + hash;
                 Map<String, String> components = componentMaterials(stack);
@@ -155,10 +159,11 @@ public final class DomumOrnamentumResolver {
      */
     public static Map<String, String> componentMaterials(ItemStack stack) {
         Map<String, String> result = new LinkedHashMap<>();
-        if (!stack.hasTag()) {
+        CompoundTag root = Platform.get().blockEntityData(stack).orElse(null);
+        if (root == null) {
             return result;
         }
-        CompoundTag textureData = findTextureData(stack.getTag());
+        CompoundTag textureData = findTextureData(root);
         if (textureData == null) {
             return result;
         }
@@ -203,7 +208,7 @@ public final class DomumOrnamentumResolver {
         if (rl == null) {
             return null;
         }
-        Block block = ForgeRegistries.BLOCKS.getValue(rl);
+        Block block = BuiltInRegistries.BLOCK.get(rl);
         return block != null ? block.getName().getString() : null;
     }
 
@@ -279,7 +284,7 @@ public final class DomumOrnamentumResolver {
             return false;
         }
         ResourceLocation rl = ResourceLocation.tryParse(value);
-        return rl != null && ForgeRegistries.BLOCKS.containsKey(rl);
+        return rl != null && BuiltInRegistries.BLOCK.containsKey(rl);
     }
 
     private static String hash8(String input) {

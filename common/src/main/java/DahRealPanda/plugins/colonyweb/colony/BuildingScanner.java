@@ -6,7 +6,7 @@ import com.mojang.logging.LogUtils;
 import net.minecraft.core.BlockPos;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
-import net.minecraftforge.registries.ForgeRegistries;
+import net.minecraft.core.registries.BuiltInRegistries;
 import org.slf4j.Logger;
 
 import java.util.Collection;
@@ -165,7 +165,7 @@ public final class BuildingScanner {
             return null;
         }
         try {
-            ResourceLocation location = ForgeRegistries.BLOCKS.getKey(level.getBlockState(pos).getBlock());
+            ResourceLocation location = BuiltInRegistries.BLOCK.getKey(level.getBlockState(pos).getBlock());
             return location != null ? location.toString() : null;
         } catch (Throwable t) {
             return null;
