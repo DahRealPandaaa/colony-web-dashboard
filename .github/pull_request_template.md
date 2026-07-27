@@ -12,19 +12,11 @@ Where does this belong?
 Adding a Minecraft version needs no CI change — see "Adding a Minecraft version" in the README.
 -->
 
-## Version bump
+## Release
 
-The release version is taken from the branch prefix: `major/` and `breaking/` bump major,
-`feat/`, `feature/` and `minor/` bump minor, anything else bumps patch.
+Nothing to choose here. Merging publishes a pre-release carrying the next CI build
+number — `v4`, `v5`, `v6` — so neither the branch name nor this description can change
+what gets published.
 
-Tick a box to override that:
-
-- [ ] **major** — breaking change
-- [ ] **minor** — new feature, backwards compatible
-- [ ] **patch** — fix, docs or internal change
-
-<!-- Leave all boxes unticked to use the branch prefix. -->
-
-A merged pull request always keeps the current suffix, so it can only ever cut another
-`-BETA`. Promoting to a full release, or publishing a shortened version such as `v1.1`
-or `v2`, is done by running **Build & Release** manually from the Actions tab.
+Full `x.x.x` releases are a separate, deliberate step: run **Build & Release** manually
+from the Actions tab and give it the exact version.
