@@ -164,16 +164,19 @@ public final class BuiltinEntityModels {
         // bottom: box(1, 0, 1, 14, 10, 14)
         BlockModel.Element bottom = box(1, 0, 1, 15, 10, 15);
         entityBox(bottom, tex, 0, 19, 14, 10, 14);
+        flipSidesV(bottom);
         model.elements.add(bottom);
 
         // lid: box(1, 0, 0, 14, 5, 14) offset by (0, 9, 1)
         BlockModel.Element lid = box(1, 9, 1, 15, 14, 15);
         entityBox(lid, tex, 0, 0, 14, 5, 14);
+        flipSidesV(lid);
         model.elements.add(lid);
 
         // lock: box(7, -2, 14, 2, 4, 1) offset by (0, 9, 1)
         BlockModel.Element lock = box(7, 7, 15, 9, 11, 16);
         entityBox(lock, tex, 0, 0, 2, 4, 1);
+        flipSidesV(lock);
         model.elements.add(lock);
 
         turn(model, 180);
@@ -343,6 +346,26 @@ public final class BuiltinEntityModels {
         element.faces.put("north", tex.face(u + d, v + d, u + d + w, v + d + h));
         element.faces.put("east", tex.face(u + d + w, v + d, u + d + w + d, v + d + h));
         element.faces.put("south", tex.face(u + d + w + d, v + d, u + d + w + d + w, v + d + h));
+    }
+
+    /**
+     * Read a box's four side strips bottom-to-top instead of top-to-bottom.
+     *
+     * <p>{@link #entityBox} follows the entity convention, where a box's y axis points down and
+     * so the top of its texture strip is the top of the box once drawn. The chest's layer
+     * definition is authored the other way up — its boxes stack upwards — which leaves every
+     * side strip mirrored, putting the lid's latch cut-out along its top edge and the body's
+     * latch shadow along the floor.</p>
+     */
+    private static void flipSidesV(BlockModel.Element element) {
+        for (String direction : new String[]{"west", "north", "east", "south"}) {
+            BlockModel.Face face = element.faces.get(direction);
+            if (face != null) {
+                double v0 = face.uv[1];
+                face.uv[1] = face.uv[3];
+                face.uv[3] = v0;
+            }
+        }
     }
 
     /** Re-point a box's faces for a model the game draws flipped ({@code scale(1, -1, -1)}). */
