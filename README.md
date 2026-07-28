@@ -1,6 +1,6 @@
 # ColonyWeb
 
-A **server-side-only** Minecraft Forge mod (MC **1.20.1**, Forge **47.4.0**) that expands on
+A **server-side-only** Minecraft mod for **1.20.1 (Forge)** and **1.21.1 (NeoForge)** that expands on
 [**MineColonies**](https://www.curseforge.com/minecraft/mc-mods/minecolonies) by exposing a
 **live web dashboard**, served by the Minecraft server itself. Open it in any browser to see —
 per colony — which builder is working on which building, exactly what resources each
@@ -321,11 +321,19 @@ colony. It also invalidates nothing — existing sessions keep working and pick 
 
 ## Project Structure
 
+Shared source lives in `common/`; each supported Minecraft version adds a handful of files of its
+own under `versions/`. See [Adding a Minecraft version](#adding-a-minecraft-version) for the split.
+
 ```
-src/main/java/DahRealPanda/plugins/colonyweb/
-  ColonyWeb.java                 # @Mod entry — server lifecycle + command wiring
+common/src/main/java/DahRealPanda/plugins/colonyweb/
+  ColonyWeb.java                 # mod id, log prefix, the three lifecycle hooks
   Config.java                    # server config (port, bind, refresh, assets, host, auth)
   ColonyWebService.java          # wires web server, auth, provider, scheduler together
+
+  platform/
+    Platform.java                # the ~9 things that differ per Minecraft version / loader
+    ItemSlots.java               # loader-neutral read-only view of an item handler
+    ConfigBuilder.java           # loader-neutral config spec builder
 
   auth/
     AuthService.java             # pairing codes, sessions, grants, access checks
@@ -395,9 +403,8 @@ src/main/java/DahRealPanda/plugins/colonyweb/
     ColonyWebCommand.java        # /colonyweb — the Brigadier tree only
     AccessCommands.java          # sync / access grant|revoke|list / logout bodies
 
-src/main/resources/
-  META-INF/mods.toml             # server-side; optional deps on minecolonies & domum_ornamentum
-  pack.mcmeta
+common/src/main/resources/
+  pack.mcmeta                    # pack_format is templated per Minecraft version
   webroot/
     index.html                   # app shell: sidebar, topbar, partial slots
     favicon.svg
@@ -421,6 +428,20 @@ src/main/resources/
       blocks/blockhut*.png       # the game's own hut block icon, one per building
       jobs/<job>-<gender>.png    # citizen portraits, plus _citizen-* as the generic
     vendor/alpine.min.js         # bundled Alpine.js (no CDN dependency)
+
+versions/1.20.1-forge/           # Forge 47.x on Minecraft 1.20.1, JDK 17
+  build.gradle  gradle.properties
+  src/main/java/…/forge/
+    ColonyWebForge.java          # @Mod entry — forwards Forge events to ColonyWeb
+    ForgeConfig.java             # ForgeConfigSpec adapter over ConfigBuilder
+    ForgePlatform.java           # capabilities, stack NBT, ModList
+  src/main/resources/META-INF/mods.toml
+
+versions/1.21.1-neoforge/        # NeoForge 21.1.x on Minecraft 1.21.1, JDK 21
+  …the same four files, against the NeoForge API
+  src/main/resources/META-INF/neoforge.mods.toml
+
+gradle/mod-common.gradle         # shared build conventions for every version project
 
 tools/
   wiki-images.js                 # picks which wiki images to bundle -> wiki-images.tsv
@@ -726,7 +747,25 @@ colonyweb/
 
 ## Building From Source
 
-Requirements: **JDK 17** (Forge 1.20.1 requires it to run the game).
+Requirements: **JDK 17** for the 1.20.1 target and **JDK 21** for the 1.21.1 one. Gradle picks the
+right one per target through toolchains and will download a missing JDK itself.
+
+```powershell
+# from the project root
+./gradlew build                            # every supported version
+./gradlew '-PmcVersions=1.21.1-neoforge' build   # just one
+./gradlew listVersions                     # what this checkout can build
+```
+
+Each version's jar lands in its own project:
+
+```
+versions/1.20.1-forge/build/libs/colonyweb-1.20.1-forge-<v>.jar
+versions/1.21.1-neoforge/build/libs/colonyweb-1.21.1-neoforge-<v>.jar
+```
+
+> **Quote `-P` arguments in PowerShell.** Unquoted, PowerShell mangles `-PmcVersions=1.21.1-neoforge`
+> and Gradle receives `1`. Bash needs no quoting.
 
 ### Local development in VS Code
 
@@ -744,33 +783,85 @@ singleplayer client task. Stop a session with the trash-can button in its termin
 
 MineColonies, Structurize, BlockUI, Multi-Piston, and Domum Ornamentum are downloaded into the
 development runtime automatically by Gradle; no manual jar copying is needed. Additional optional
-mods can be placed in `run-client/mods/`, `run-server/mods/`, or both. The dedicated server's first
+mods can be placed in `run-client/mods/`, `run-server/mods/`, or both.
+
+How they get there differs by loader, which matters only if a run ever starts without them.
+ForgeGradle hands them to 1.20.1 on the run classpath, where FML finds them. NeoForge only
+discovers mods in the run directory's `mods/` folder, so the 1.21.1 project resolves the same
+jars into a `devMods` configuration and stages them there before each run — see
+`stageRunClientMods` / `stageRunServerMods` in `versions/1.21.1-neoforge/build.gradle`. Staging
+replaces only the jars it put there itself, so anything added by hand survives. The dedicated server's first
 start creates `run-server/eula.txt` and exits; read it, set `eula=true` if you accept the Minecraft
 EULA, then run the server task again.
 
-The same sessions are available without VS Code:
+The same sessions are available without VS Code. Run configurations belong to a version project,
+so they are addressed by path:
 
 ```powershell
-# from the project root
-./gradlew build       # compiles the mod → build/libs/colonyweb-1.0.0-BETA.jar
-./gradlew runClient   # Minecraft client + integrated singleplayer server
-./gradlew runServer   # dedicated server
+./gradlew :versions:1.20.1-forge:runClient      # Minecraft client + integrated singleplayer server
+./gradlew :versions:1.20.1-forge:runServer      # dedicated server
+./gradlew :versions:1.21.1-neoforge:runClient   # the same pair, on 1.21.1
+./gradlew :versions:1.21.1-neoforge:runServer
 ```
+
+Every target has both, and each keeps its own `versions/<mc>-<loader>/run-client/` and
+`run-server/`, so a 1.20.1 session and a 1.21.1 session can be open at once without sharing a
+world or a config file. They do still share a dashboard port, so to run two at once change
+`httpPort` in one of their `config/colonyweb-common.toml` files.
 
 Then open `http://localhost:8723/` (or the configured port), and run `/colonyweb sync` in-game
 for a sign-in code.
 
-> Runtime integration is reflection-based, so **MineColonies is not required to compile**.
-> Optional compile-time API access can be enabled by uncommenting the `compileOnly` deps in
-> `build.gradle` (the LDTTeam maven repo is already configured).
+> Runtime integration is reflection-based, so **MineColonies is not required to compile** — it and
+> its support mods are `runtimeOnly` on every target (the LDTTeam maven repo is already configured
+> in `gradle/mod-common.gradle`).
+
+---
+
+## Adding a Minecraft version
+
+The mod is built once per supported Minecraft version from a single branch:
+
+```
+common/                     everything that compiles against every supported version
+  src/main/java/…             ~58 of the 66 source files, plus the whole front-end
+  src/main/resources/         webroot/, pack.mcmeta
+versions/1.20.1-forge/      ForgeGradle, JDK 17
+versions/1.21.1-neoforge/   ModDevGradle, JDK 21
+  build.gradle                the loader plugin, run configs and runtime mod deps
+  gradle.properties           this target's Minecraft/loader/dependency versions
+  src/main/java/…             the @Mod entrypoint, the config adapter, the Platform impl
+  src/main/resources/         META-INF/mods.toml or neoforge.mods.toml
+gradle/mod-common.gradle    what every version project shares
+```
+
+Only three things ever differ between targets, and they all sit behind
+`common/src/main/java/DahRealPanda/plugins/colonyweb/platform/Platform.java`: how a block entity
+exposes its item handler, where a stack keeps its block-entity data, and how mods are enumerated.
+Everything else — the scanners, the isometric renderer, the web server, the auth store — is shared.
+
+To add a version:
+
+1. Copy the closest `versions/<mc>-<loader>/` directory and adjust its `gradle.properties`
+   (`minecraft_version`, the loader version and range, `pack_format`, `java_version`, and the
+   MineColonies/Domum Ornamentum builds for that Minecraft version).
+2. Point its `build.gradle` at the right toolchain plugin, and translate the mod metadata file.
+3. Implement `Platform` for it, next to the existing `ForgePlatform` / `NeoForgePlatform`.
+
+Nothing else needs to know. `settings.gradle` discovers the directory, and CI derives its build
+matrix — including which JDK to install — from `versions/*/gradle.properties`, so no workflow
+needs editing. If shared code needs something a new version does something different about, add a
+method to `Platform` rather than moving the caller out of `common/`; that keeps the shared surface
+honest about how much really differs.
 
 ---
 
 ## Installing on a Server
 
-1. Build the jar (or grab it from `build/libs/`).
-2. Place `colonyweb-1.0.0-BETA.jar` in the server's `mods/` folder, **alongside MineColonies
-   and Domum Ornamentum**.
+1. Build the jars (or grab them from the latest release).
+2. Place the jar **matching your Minecraft version** — `colonyweb-1.20.1-forge-<v>.jar` or
+   `colonyweb-1.21.1-neoforge-<v>.jar` — in the server's `mods/` folder, **alongside MineColonies
+   and Domum Ornamentum**. Installing the wrong one will simply fail to load.
 3. Start the server once to generate `config/colonyweb-common.toml`, adjust the port/bind if
    needed, and restart.
 4. Open `http://<host>:<httpPort>/` or run `/colonyweb` for the link, then `/colonyweb sync`
@@ -824,7 +915,8 @@ The dashboard logs a line per scan so issues are visible without debug logging:
 
 ## Tech Stack
 
-- **Java 17**, **Forge 47.4.0**, **Minecraft 1.20.1**.
+- **Java 17 / Forge 47.4.0** on Minecraft 1.20.1, **Java 21 / NeoForge 21.1.244** on 1.21.1 —
+  one shared source tree, one small platform interface per target.
 - `com.sun.net.httpserver.HttpServer` (JDK built-in) for HTTP + SSE — no external HTTP lib.
 - **Gson** (already on the MC classpath) for JSON.
 - Vanilla asset acquisition via the Mojang version manifest + client jar extraction.
@@ -838,13 +930,21 @@ The dashboard logs a line per scan so issues are visible without debug logging:
 
 ## Compatibility & Versions
 
-- **Minecraft:** 1.20.1
-- **Forge:** 47.4.0
-- **MineColonies:** 1.20.1 branch (latest build — reflection-based, so version-independent at runtime)
-- **Domum Ornamentum:** 1.20.1 (optional; enables textured-block material icons)
+Every release carries one jar per supported Minecraft version. Pick the one matching your server;
+the file name says which is which.
 
-Both MineColonies and Domum Ornamentum are declared as **optional** dependencies
-(`mandatory = false`, `AFTER`) and are bound at runtime via reflection.
+| Minecraft | Loader   | Loader version | JDK | Jar                                 |
+|-----------|----------|----------------|-----|-------------------------------------|
+| 1.20.1    | Forge    | 47.4.0         | 17  | `colonyweb-1.20.1-forge-<v>.jar`    |
+| 1.21.1    | NeoForge | 21.1.244       | 21  | `colonyweb-1.21.1-neoforge-<v>.jar` |
+
+MineColonies and Domum Ornamentum are declared as **optional** dependencies (`AFTER`) and bound at
+runtime via reflection, so any build of them for your Minecraft version should work — the mod loads
+and stays quiet if they are absent.
+
+The dashboard itself is identical on both: the entire front-end, the HTTP/SSE server, the texture
+pipeline and every colony scanner are shared source. See
+[Adding a Minecraft version](#adding-a-minecraft-version).
 
 ---
 

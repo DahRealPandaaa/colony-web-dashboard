@@ -3,7 +3,8 @@
 build/
 !gradle/wrapper/gradle-wrapper.jar
 
-# Forge / Minecraft dev run directories
+# Forge / NeoForge dev run directories. Each versions/<mc>-<loader> project has its own set,
+# so these stay unanchored to match at any depth.
 run/
 run-client/
 run-server/

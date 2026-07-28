@@ -1,5 +1,20 @@
 {
     "version": "2.0.0",
+    // Run configurations belong to a version project, so every task is addressed by project path.
+    // Pick which Minecraft version to run from the prompt; add new ones to the "mcVersion" input
+    // at the bottom when a versions/ directory is added.
+    "inputs": [
+        {
+            "id": "mcVersion",
+            "type": "pickString",
+            "description": "Which Minecraft version to run",
+            "default": "1.20.1-forge",
+            "options": [
+                "1.20.1-forge",
+                "1.21.1-neoforge"
+            ]
+        }
+    ],
     "tasks": [
         {
             "label": "Minecraft: Run Client (Singleplayer)",
@@ -9,7 +24,8 @@
                 "command": "${workspaceFolder}\\gradlew.bat"
             },
             "args": [
-                "runClient",
+                ":versions:${input:mcVersion}:runClient",
+                "-PmcVersions=${input:mcVersion}",
                 "--console=plain"
             ],
             "options": {
@@ -35,7 +51,8 @@
                 "command": "${workspaceFolder}\\gradlew.bat"
             },
             "args": [
-                "runServer",
+                ":versions:${input:mcVersion}:runServer",
+                "-PmcVersions=${input:mcVersion}",
                 "--console=plain"
             ],
             "options": {
@@ -57,6 +74,28 @@
             ],
             "dependsOrder": "parallel",
             "problemMatcher": []
+        },
+        {
+            "label": "Minecraft: Build All Versions",
+            "type": "shell",
+            "command": "${workspaceFolder}/gradlew",
+            "windows": {
+                "command": "${workspaceFolder}\\gradlew.bat"
+            },
+            "args": [
+                "build",
+                "--console=plain"
+            ],
+            "options": {
+                "cwd": "${workspaceFolder}"
+            },
+            "problemMatcher": [],
+            "presentation": {
+                "reveal": "always",
+                "panel": "dedicated",
+                "group": "minecraft-dev",
+                "clear": true
+            }
         }
     ]
 }

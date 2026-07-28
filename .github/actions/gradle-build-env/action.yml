@@ -1,23 +1,39 @@
 name: Gradle build environment
 description: >-
-  JDK 17, wrapper validation and every cache a ColonyWeb build needs.
+  The JDK, wrapper validation and every cache one Minecraft target's build needs.
   Shared by the PR build and the release build so the two can never drift apart.
 
 inputs:
+  version:
+    description: The versions/ directory being built, e.g. 1.20.1-forge. Scopes the caches to it.
+    required: true
+  java-version:
+    description: >-
+      JDK for this target — 17 for Forge 1.20.1, 21 for NeoForge 1.21.1. Comes from the target's
+      own java_version property via .github/actions/build-targets, so it always matches the
+      toolchain the Gradle build asks for.
+    required: true
+  toolchain-cache-path:
+    description: >-
+      Where this target's loader toolchain keeps its decompiled Minecraft. ForgeGradle uses
+      ~/.gradle/caches/forge_gradle (~1.5 GB); ModDevGradle uses ~/.gradle/caches/neoformruntime
+      (~300 MB). Both are regenerated at a cost of many minutes, and neither is covered by
+      setup-gradle.
+    required: true
   cache-read-only:
     description: >-
-      When true the caches are restored but never written back. Pull request
-      builds should leave this at true so only main populates the caches.
+      When true the caches are restored but never written back. Pull request builds should leave
+      this at true so only main populates the caches.
     required: false
     default: 'true'
 
 outputs:
-  forge-cache-key:
-    description: Key the ForgeGradle cache was looked up under, for a later cache/save step.
-    value: ${{ steps.forge-key.outputs.key }}
-  forge-cache-hit:
-    description: Set when the ForgeGradle cache was restored from an exact key match.
-    value: ${{ steps.forge-cache.outputs.cache-hit }}
+  toolchain-cache-key:
+    description: Key the toolchain cache was looked up under, for a later cache/save step.
+    value: ${{ steps.toolchain-key.outputs.key }}
+  toolchain-cache-hit:
+    description: Set when the toolchain cache was restored from an exact key match.
+    value: ${{ steps.toolchain-cache.outputs.cache-hit }}
 
 runs:
   using: composite
@@ -33,40 +49,41 @@ runs:
     - name: Validate Gradle wrapper
       uses: gradle/actions/wrapper-validation@v5
 
-    # Forge 1.20.1 requires JDK 17. Deliberately no `cache: gradle` here:
-    # setup-gradle below caches the same directories with far better keys.
-    - name: Set up JDK 17
+    # One JDK is enough per job: every build command passes -PmcVersions, so only this target's
+    # project is configured and only its toolchain is requested. Deliberately no `cache: gradle`
+    # here — setup-gradle below caches the same directories with far better keys.
+    - name: Set up JDK ${{ inputs.java-version }}
       uses: actions/setup-java@v5
       with:
         distribution: temurin
-        java-version: '17'
+        java-version: ${{ inputs.java-version }}
 
-    # ForgeGradle keeps its decompiled Minecraft, MCP runtime and deobfuscated
-    # mod dependencies in ~/.gradle/caches/forge_gradle — roughly 1.5 GB that
-    # costs upwards of ten minutes to regenerate, and the single biggest win
-    # available to this pipeline. setup-gradle does not cover that directory
-    # (it caches modules-2, jars-*, build-cache-1 and the wrapper dists), so it
-    # gets its own entry here.
-    #
-    # The key tracks everything that can invalidate those artifacts: the
-    # Minecraft/Forge/mapping versions and the mod dependency versions all live
-    # in gradle.properties, and the repository and dependency declarations live
-    # in build.gradle. The restore-keys fall back to the newest previous cache
-    # so a version bump re-uses most of it instead of starting from scratch.
-    - name: Compute ForgeGradle cache key
-      id: forge-key
+    # The key tracks everything that can invalidate the decompiled Minecraft: the loader and
+    # mapping versions and the mod dependency versions all live in the target's gradle.properties,
+    # its repository and dependency declarations in its build.gradle, and the shared conventions in
+    # gradle/mod-common.gradle. Scoping the key by target means a 1.21.1 bump cannot evict the
+    # 1.20.1 cache. The restore-keys fall back to the newest previous cache for the same target, so
+    # a version bump re-uses most of it instead of starting from scratch.
+    - name: Compute toolchain cache key
+      id: toolchain-key
       shell: bash
       run: |
-        echo "key=forge-gradle-${{ runner.os }}-${{ hashFiles('gradle.properties', 'build.gradle', 'settings.gradle', 'gradle/wrapper/gradle-wrapper.properties') }}" >> "$GITHUB_OUTPUT"
+        echo "key=mcbuild-${{ inputs.version }}-${{ runner.os }}-${{ hashFiles(
+          'gradle.properties',
+          'settings.gradle',
+          'gradle/mod-common.gradle',
+          'gradle/wrapper/gradle-wrapper.properties',
+          format('versions/{0}/gradle.properties', inputs.version),
+          format('versions/{0}/build.gradle', inputs.version)) }}" >> "$GITHUB_OUTPUT"
 
-    - name: Restore ForgeGradle cache
-      id: forge-cache
+    - name: Restore toolchain cache
+      id: toolchain-cache
       uses: actions/cache/restore@v6
       with:
-        path: ~/.gradle/caches/forge_gradle
-        key: ${{ steps.forge-key.outputs.key }}
+        path: ${{ inputs.toolchain-cache-path }}
+        key: ${{ steps.toolchain-key.outputs.key }}
         restore-keys: |
-          forge-gradle-${{ runner.os }}-
+          mcbuild-${{ inputs.version }}-${{ runner.os }}-
 
     # Dependencies, instrumented jars, wrapper distributions and the local
     # Gradle build cache. cache-read-only keeps pull requests from filling the
