@@ -10,7 +10,10 @@ import net.minecraft.core.registries.BuiltInRegistries;
 import org.slf4j.Logger;
 
 import java.util.Collection;
+import java.util.List;
 import java.util.Locale;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 import static DahRealPanda.plugins.colonyweb.colony.MineColoniesReflect.fieldValue;
 import static DahRealPanda.plugins.colonyweb.colony.MineColoniesReflect.invoke;
@@ -24,6 +27,9 @@ public final class BuildingScanner {
 
     /** Every MineColonies hut block id starts with this. */
     private static final String HUT_PREFIX = "blockhut";
+
+    /** Colony id to the building types last reported as warehouse-less, to log only on change. */
+    private static final Map<Integer, List<String>> LOGGED_NO_WAREHOUSE = new ConcurrentHashMap<>();
 
     public void scan(Collection<Object> buildings, ScanContext ctx) {
         // Must be per scan: it remembers which racks it has already counted, so a shared
@@ -56,11 +62,25 @@ public final class BuildingScanner {
             }
         }
         if (!ctx.snapshot.warehouse.present && !buildings.isEmpty()) {
-            LOGGER.info("[ColonyWeb] no warehouse matched; building types seen: {}",
-                    ctx.snapshot.buildings.stream()
-                            .map(b -> b.type + " @" + b.blockId)
-                            .distinct().limit(30).toList());
+            logNoWarehouse(ctx);
         }
+    }
+
+    /**
+     * A colony with no warehouse yet is a normal state, not a fault — but the same is true of
+     * a warehouse whose hut id we failed to recognise, and only this list tells them apart.
+     * Logged at debug, and only when the colony's set of building types has changed, because
+     * the scan runs every few seconds for the lifetime of the server.
+     */
+    private static void logNoWarehouse(ScanContext ctx) {
+        List<String> types = ctx.snapshot.buildings.stream()
+                .map(b -> b.type + " @" + b.blockId)
+                .distinct().sorted().limit(30).toList();
+        if (types.equals(LOGGED_NO_WAREHOUSE.put(ctx.snapshot.id, types))) {
+            return;
+        }
+        LOGGER.debug("[ColonyWeb] colony {} has no warehouse; building types seen: {}",
+                ctx.snapshot.id, types);
     }
 
     /** MineColonies keys buildings (and work-order claims) by the hut's position. */

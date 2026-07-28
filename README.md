@@ -783,7 +783,14 @@ singleplayer client task. Stop a session with the trash-can button in its termin
 
 MineColonies, Structurize, BlockUI, Multi-Piston, and Domum Ornamentum are downloaded into the
 development runtime automatically by Gradle; no manual jar copying is needed. Additional optional
-mods can be placed in `run-client/mods/`, `run-server/mods/`, or both. The dedicated server's first
+mods can be placed in `run-client/mods/`, `run-server/mods/`, or both.
+
+How they get there differs by loader, which matters only if a run ever starts without them.
+ForgeGradle hands them to 1.20.1 on the run classpath, where FML finds them. NeoForge only
+discovers mods in the run directory's `mods/` folder, so the 1.21.1 project resolves the same
+jars into a `devMods` configuration and stages them there before each run — see
+`stageRunClientMods` / `stageRunServerMods` in `versions/1.21.1-neoforge/build.gradle`. Staging
+replaces only the jars it put there itself, so anything added by hand survives. The dedicated server's first
 start creates `run-server/eula.txt` and exits; read it, set `eula=true` if you accept the Minecraft
 EULA, then run the server task again.
 
@@ -793,8 +800,14 @@ so they are addressed by path:
 ```powershell
 ./gradlew :versions:1.20.1-forge:runClient      # Minecraft client + integrated singleplayer server
 ./gradlew :versions:1.20.1-forge:runServer      # dedicated server
-./gradlew :versions:1.21.1-neoforge:runServer   # the same, on 1.21.1
+./gradlew :versions:1.21.1-neoforge:runClient   # the same pair, on 1.21.1
+./gradlew :versions:1.21.1-neoforge:runServer
 ```
+
+Every target has both, and each keeps its own `versions/<mc>-<loader>/run-client/` and
+`run-server/`, so a 1.20.1 session and a 1.21.1 session can be open at once without sharing a
+world or a config file. They do still share a dashboard port, so to run two at once change
+`httpPort` in one of their `config/colonyweb-common.toml` files.
 
 Then open `http://localhost:8723/` (or the configured port), and run `/colonyweb sync` in-game
 for a sign-in code.

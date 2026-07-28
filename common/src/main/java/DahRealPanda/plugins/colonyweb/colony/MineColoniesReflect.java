@@ -8,6 +8,7 @@ import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.util.Arrays;
 import java.util.Optional;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
@@ -24,6 +25,7 @@ public final class MineColoniesReflect {
     private static final ConcurrentHashMap<String, Optional<Method>> METHOD_CACHE = new ConcurrentHashMap<>();
     private static final ConcurrentHashMap<String, Optional<Field>> FIELD_CACHE = new ConcurrentHashMap<>();
     private static final ConcurrentHashMap<Class<?>, Method[]> METHODS_CACHE = new ConcurrentHashMap<>();
+    private static final Set<String> LOGGED_MISSES = ConcurrentHashMap.newKeySet();
 
     private static Boolean loaded;
 
@@ -159,6 +161,31 @@ public final class MineColoniesReflect {
      * single call site works across signatures.</p>
      */
     public static Optional<Object> invokeAny(Object target, String name, Object... args) {
+        return invokeMatching(target, name, true, args);
+    }
+
+    /**
+     * Invoke the first of several candidate no-arg method names that exists, fail-soft.
+     *
+     * <p>For members MineColonies renamed between versions, where a miss on the earlier
+     * names is the expected answer rather than a problem. Only the case where none of them
+     * resolve is logged.</p>
+     */
+    public static Optional<Object> invokeAnyOf(Object target, String... names) {
+        if (target == null) {
+            return Optional.empty();
+        }
+        for (String name : names) {
+            Optional<Object> result = invokeMatching(target, name, false);
+            if (result.isPresent()) {
+                return result;
+            }
+        }
+        logMissOnce(target.getClass(), String.join("/", names));
+        return Optional.empty();
+    }
+
+    private static Optional<Object> invokeMatching(Object target, String name, boolean logMiss, Object... args) {
         if (target == null) {
             return Optional.empty();
         }
@@ -177,8 +204,21 @@ public final class MineColoniesReflect {
                 }
             }
         }
-        LOGGER.debug("[ColonyWeb] invokeAny found no usable {}.{}", target.getClass().getName(), name);
+        if (logMiss) {
+            logMissOnce(target.getClass(), name);
+        }
         return Optional.empty();
+    }
+
+    /**
+     * Report a missing member once per class+name. The scanners call reflection once per
+     * citizen/research/work order, so an unconditional log here buries the rest of the
+     * server log under thousands of identical lines.
+     */
+    private static void logMissOnce(Class<?> owner, String name) {
+        if (LOGGED_MISSES.add(owner.getName() + "#" + name)) {
+            LOGGER.debug("[ColonyWeb] invokeAny found no usable {}.{}", owner.getName(), name);
+        }
     }
 
     /** Read a static field from a resolved class, fail-soft. */

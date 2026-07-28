@@ -5,9 +5,11 @@ import DahRealPanda.plugins.colonyweb.colony.model.ResearchInfo;
 import DahRealPanda.plugins.colonyweb.util.Text;
 import com.mojang.logging.LogUtils;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.level.ItemLike;
 import org.slf4j.Logger;
 
 import java.util.ArrayDeque;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Deque;
 import java.util.HashSet;
@@ -16,6 +18,7 @@ import java.util.Locale;
 import java.util.Set;
 
 import static DahRealPanda.plugins.colonyweb.colony.MineColoniesReflect.invokeAny;
+import static DahRealPanda.plugins.colonyweb.colony.MineColoniesReflect.invokeAnyOf;
 import static DahRealPanda.plugins.colonyweb.colony.Scan.intOf;
 
 /**
@@ -130,7 +133,7 @@ public final class ResearchScanner {
         }
 
         collectDescriptions(invokeAny(research, "getEffects").orElse(null), entry.effects);
-        collectDescriptions(invokeAny(research, "getResearchRequirement").orElse(null), entry.requirements);
+        collectDescriptions(invokeAny(research, "getResearchRequirements").orElse(null), entry.requirements);
         collectCosts(invokeAny(research, "getCostList").orElse(null), entry.cost);
         return entry;
     }
@@ -149,15 +152,13 @@ public final class ResearchScanner {
         return "NOT_STARTED";
     }
 
+    /** Requirements describe themselves through {@code getDesc}; effects carry theirs as the name. */
     private static void collectDescriptions(Object source, List<String> out) {
         if (!(source instanceof Collection<?> collection)) {
             return;
         }
         for (Object item : collection) {
-            Object desc = Scan.firstNonNull(
-                    invokeAny(item, "getDesc").orElse(null),
-                    invokeAny(item, "getName").orElse(null),
-                    invokeAny(item, "getId").orElse(null));
+            Object desc = invokeAnyOf(item, "getDesc", "getName", "getId").orElse(null);
             String text = Text.displayName(desc, null);
             if (text != null && !text.isBlank() && !out.contains(text)) {
                 out.add(text);
@@ -165,18 +166,47 @@ public final class ResearchScanner {
         }
     }
 
+    /**
+     * Research costs changed shape between versions: 1.20.1 hands back MineColonies' own
+     * {@code IResearchCost} (a list of {@code Item} plus {@code getCount()}), 1.21.1 hands
+     * back a NeoForge {@code SizedIngredient} (an array of stacks plus {@code count()}).
+     * Both expose the items under {@code getItems}.
+     */
     private static void collectCosts(Object source, List<ItemCount> out) {
         if (!(source instanceof Collection<?> collection)) {
             return;
         }
-        for (Object item : collection) {
-            ItemStack stack = Scan.itemStackOf(Scan.firstNonNull(
-                    invokeAny(item, "getItemStack").orElse(null),
-                    invokeAny(item, "getStack").orElse(null)));
+        for (Object cost : collection) {
+            ItemStack stack = firstStack(invokeAnyOf(cost, "getItems", "getItemStacks").orElse(null));
             if (stack == null || stack.isEmpty()) {
                 continue;
             }
-            out.add(Scan.itemCount(stack, intOf(invokeAny(item, "getAmount").orElse(null), stack.getCount()), -1));
+            int count = intOf(invokeAnyOf(cost, "getCount", "count").orElse(null), stack.getCount());
+            out.add(Scan.itemCount(stack, count, -1));
         }
+    }
+
+    /** First usable stack out of an item or stack, or an array/collection of either. */
+    private static ItemStack firstStack(Object value) {
+        if (value instanceof ItemStack stack) {
+            return stack.isEmpty() ? null : stack;
+        }
+        if (value instanceof ItemLike item) {
+            ItemStack stack = new ItemStack(item);
+            return stack.isEmpty() ? null : stack;
+        }
+        Iterable<?> items = value instanceof Object[] array ? Arrays.asList(array)
+                : value instanceof Iterable<?> iterable ? iterable
+                : null;
+        if (items == null) {
+            return null;
+        }
+        for (Object item : items) {
+            ItemStack stack = firstStack(item);
+            if (stack != null) {
+                return stack;
+            }
+        }
+        return null;
     }
 }
