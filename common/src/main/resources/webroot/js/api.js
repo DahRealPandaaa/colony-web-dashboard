@@ -56,7 +56,7 @@ export const api = {
  * answer. Riding the version in the URL makes a new render a new URL, and the stale entry just
  * falls out of the cache on its own.
  */
-const RENDER_VERSION = "3";
+const RENDER_VERSION = "4";
 
 /** PNG icon for an item/block texture key (the "#" in Domum variants must be encoded). */
 export function textureUrl(key) {

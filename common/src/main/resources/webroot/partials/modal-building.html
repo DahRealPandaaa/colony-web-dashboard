@@ -73,6 +73,7 @@
                                         </span>
                                     </div>
                                     <div class="mc-line" x-show="r.craftedIn">Crafted in the <span class="mc-val" x-text="r.craftedIn"></span></div>
+                                    <div class="mc-line" x-show="r.variant">Type: <span class="mc-val" x-text="r.variant"></span></div>
                                     <template x-for="(c, cx) in (r.components || [])" :key="cx">
                                         <div class="mc-line"><span x-text="c.label"></span>: <span class="mc-val" x-text="c.material"></span></div>
                                     </template>

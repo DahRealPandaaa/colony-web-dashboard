@@ -124,6 +124,7 @@
                                                 </span>
                                             </div>
                                             <div class="mc-line" x-show="i.craftedIn">Crafted in the <span class="mc-val" x-text="i.craftedIn"></span></div>
+                                            <div class="mc-line" x-show="i.variant">Type: <span class="mc-val" x-text="i.variant"></span></div>
                                             <template x-for="(c, cx) in (i.components || [])" :key="cx">
                                                 <div class="mc-line"><span x-text="c.label"></span>: <span class="mc-val" x-text="c.material"></span></div>
                                             </template>

@@ -3,6 +3,7 @@ package DahRealPanda.plugins.colonyweb.colony;
 import DahRealPanda.plugins.colonyweb.colony.model.ItemCount;
 import DahRealPanda.plugins.colonyweb.colony.model.ItemInfo;
 import DahRealPanda.plugins.colonyweb.texture.DomumOrnamentumResolver;
+import DahRealPanda.plugins.colonyweb.util.Text;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.item.ItemStack;
 
@@ -60,10 +61,13 @@ public final class Scan {
      */
     public static <T extends ItemInfo> T fillItem(T target, ItemStack stack) {
         target.itemKey = DomumOrnamentumResolver.textureKeyFor(stack);
-        target.name = stack.getHoverName().getString();
+        // Domum Ornamentum builds its names out of translatable components, and a dedicated server
+        // loads no modded language files — getString() would leave the raw key behind.
+        target.name = Text.componentString(stack.getHoverName());
         target.domum = DomumOrnamentumResolver.isDomum(stack);
         if (target.domum) {
             target.material = DomumOrnamentumResolver.materialName(stack).orElse(null);
+            target.variant = DomumOrnamentumResolver.variantName(stack, target.name).orElse(null);
             target.components = DomumOrnamentumResolver.componentsOf(stack);
             target.craftedIn = DO_WORKSTATION;
         }

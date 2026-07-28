@@ -55,6 +55,19 @@ public final class ForgePlatform implements Platform {
     }
 
     @Override
+    public Optional<String> blockStateProperty(ItemStack stack, String property) {
+        CompoundTag tag = stack.getTag();
+        if (tag == null) {
+            return Optional.empty();
+        }
+        // Vanilla pins block-state properties under BlockStateTag; Domum Ornamentum writes the cut
+        // shape of its property-based families (posts, fancy doors) as a plain string beside it.
+        String fromState = tag.getCompound("BlockStateTag").getString(property);
+        String value = fromState.isEmpty() ? tag.getString(property) : fromState;
+        return value.isEmpty() ? Optional.empty() : Optional.of(value);
+    }
+
+    @Override
     public String dataFingerprint(ItemStack stack) {
         return stack.hasTag() ? String.valueOf(stack.getTag()) : null;
     }
