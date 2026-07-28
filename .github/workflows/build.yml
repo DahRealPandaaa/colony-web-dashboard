@@ -1,34 +1,35 @@
 name: Build & Release
 
-# Runs on every push to main, which includes merged pull requests.
+# Runs on every push to main, which includes merged pull requests. One release carries one jar per
+# supported Minecraft version.
+#
+# Two version lineages, deliberately kept apart:
+#   CI builds  a single, ever-increasing build number — v4, v5, v6 — published as pre-releases.
+#              Every push to main takes the next one; nothing about the branch or the pull
+#              request changes it.
+#   Releases   a semver x.x.x, spelled out by hand in the "version" input below. This is the
+#              only way to cut a full release, so a merged pull request can never do it by
+#              accident.
 on:
   push:
     branches: [main]
   workflow_dispatch:
     inputs:
-      level:
-        description: >-
-          Bump to apply. "auto" uses the merged pull request just like a push does.
-          "release" promotes the current pre-release by dropping its suffix
-          (0.1.4-BETA becomes 0.1.4) and is only available here, so a merged pull
-          request can never cut a full release by accident.
-        type: choice
-        required: false
-        default: auto
-        options: [auto, patch, minor, major, release]
       version:
         description: >-
-          Exact version to publish, overriding "level". One, two or three
-          components with an optional suffix — "2", "1.1" and "1.1.0-BETA" are
-          all valid. Leave empty to compute the version from "level".
+          Semver to cut a full release with: three components and an optional
+          suffix, so "1.4.0" and "1.4.0-RC1" are both valid. Leave empty to
+          publish the next CI build number as a pre-release, exactly as a push
+          to main does.
         type: string
         required: false
         default: ''
 
 permissions:
+  # actions: write is what lets the toolchain cache be saved; contents: write
+  # is what lets the release be created.
   actions: write
   contents: write
-  pull-requests: read
 
 # A release must never be cancelled halfway, or a tag ends up without a release.
 concurrency:
@@ -36,13 +37,31 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  release:
+  # Which Minecraft versions exist is a property of the versions/ directory, not of this file, so
+  # adding one never means editing a workflow.
+  targets:
+    name: Resolve build targets
     if: github.ref == 'refs/heads/main'
-    name: Build and publish mod jar
     runs-on: ubuntu-latest
-    # A cold ForgeGradle run decompiles Minecraft and takes ~20 minutes; anything
-    # past an hour is hung rather than slow.
-    timeout-minutes: 60
+    outputs:
+      matrix: ${{ steps.targets.outputs.matrix }}
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+
+      - name: Discover build targets
+        id: targets
+        uses: ./.github/actions/build-targets
+
+  # Version resolution needs git history and the GitHub API, but no JDK and no Minecraft, so it
+  # runs once and in parallel with nothing else — every target ships under the same version.
+  version:
+    name: Resolve release version
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+      prerelease: ${{ steps.version.outputs.prerelease }}
 
     steps:
       - name: Check out repository
@@ -51,166 +70,33 @@ jobs:
           # Full history so the version steps can see every existing v* tag.
           fetch-depth: 0
 
-      # cache-read-only is false here: main is the only branch allowed to
-      # populate the shared caches that every pull request build reads.
-      - name: Set up build environment
-        id: build-env
-        uses: ./.github/actions/gradle-build-env
-        with:
-          cache-read-only: 'false'
-
-      # Which part of the version to raise, highest precedence first:
-      #   1. an exact "version" input on a manual run — no bump level needed
-      #   2. a "level" input other than "auto" on a manual run
-      #   3. a ticked "- [x] major|minor|patch" box in the merged PR description
-      #   4. the PR branch prefix — major/ and breaking/ raise major, feat/, feature/
-      #      and minor/ raise minor, everything else raises patch
-      # Direct pushes have no pull request, so they raise patch.
-      - name: Resolve bump level
-        id: bump
-        env:
-          GH_TOKEN: ${{ github.token }}
-          DISPATCH_LEVEL: ${{ inputs.level }}
-          DISPATCH_VERSION: ${{ inputs.version }}
-        run: |
-          set -euo pipefail
-
-          if [[ -n "${DISPATCH_VERSION// /}" ]]; then
-            echo "level=override" >> "$GITHUB_OUTPUT"
-            echo "Exact version requested, skipping bump level resolution"
-            exit 0
-          fi
-
-          if [[ -n "$DISPATCH_LEVEL" && "$DISPATCH_LEVEL" != auto ]]; then
-            echo "level=${DISPATCH_LEVEL}" >> "$GITHUB_OUTPUT"
-            echo "Bumping ${DISPATCH_LEVEL}, decided by the workflow_dispatch level input"
-            exit 0
-          fi
-
-          # Works for merge, squash and rebase merges alike: ask which PR this commit came from.
-          pulls="$RUNNER_TEMP/pulls.json"
-          if ! gh api "repos/${GITHUB_REPOSITORY}/commits/${GITHUB_SHA}/pulls" > "$pulls"; then
-            echo "::warning::Unable to resolve PR for ${GITHUB_SHA}; defaulting to patch bump"
-            echo '[]' > "$pulls"
-          fi
-          branch=$(jq -r '.[0].head.ref // ""' "$pulls")
-          body=$(jq -r '.[0].body // ""' "$pulls")
-
-          # Levels named on ticked checkbox lines. Unticked "- [ ]" boxes are ignored.
-          # "release" is deliberately absent: full releases are manual runs only.
-          checked=$(printf '%s' "$body" \
-            | grep -iE '^[[:space:]]*[-*][[:space:]]*\[[[:space:]]*x[[:space:]]*\]' \
-            | grep -ioE '\b(major|minor|patch)\b' \
-            | tr '[:upper:]' '[:lower:]' || true)
-
-          # If several boxes are ticked, the widest bump wins.
-          level=""
-          if grep -qx major <<<"$checked"; then
-            level=major
-          elif grep -qx minor <<<"$checked"; then
-            level=minor
-          elif grep -qx patch <<<"$checked"; then
-            level=patch
-          fi
-
-          if [[ -n "$level" ]]; then
-            reason="ticked box in the pull request description"
-          else
-            prefix="${branch%%/*}"
-            case "${prefix,,}" in
-              major|breaking)     level=major ;;
-              feat|feature|minor) level=minor ;;
-              *)                  level=patch ;;
-            esac
-            reason="branch '${branch:-none}'"
-          fi
-
-          echo "level=${level}" >> "$GITHUB_OUTPUT"
-          echo "Bumping ${level}, decided by ${reason}"
-
-      # Versions may carry one, two or three components, so "2", "1.1" and
-      # "1.1.0-BETA" are all valid releases. A bump keeps the precision it was
-      # given and only grows it when a finer component is raised:
-      #
-      #   2       + minor   -> 2.1          1.1     + major   -> 2.0
-      #   2       + patch   -> 2.0.1        1.1     + patch   -> 1.1.1
-      #   1.1.0   + minor   -> 1.2.0        1.1.3   + major   -> 2.0.0
-      #
-      # Any suffix survives a bump, so a patch on 0.1.0-BETA gives 0.1.1-BETA.
-      # The "release" level instead leaves the numbers alone and drops the
-      # suffix, promoting a pre-release to a full one.
+      # An empty "version" input — every push, and a manual run that leaves it
+      # blank — takes the next CI build number. A filled-in one cuts the semver
+      # release it names. The two lineages never touch: build numbers are counted
+      # from the plain v<n> tags alone, so cutting v1.4.0 does not move the
+      # counter, and reaching build v9 does not shift the next release's numbers.
       - name: Resolve version
         id: version
         env:
-          LEVEL: ${{ steps.bump.outputs.level }}
           OVERRIDE: ${{ inputs.version }}
         run: |
           set -euo pipefail
 
-          # Tags are the source of truth: the release commit is never pushed
-          # back, so gradle.properties only seeds the very first release.
-          file_version=$(grep -E '^mod_version=' gradle.properties | cut -d= -f2- | tr -d '[:space:]')
-          current="$file_version"
-          # versionsort.suffix=- makes git sort a suffixed tag below the plain
-          # one, so v0.1.4 outranks v0.1.4-BETA. Without it the first bump after
-          # a full release would drop straight back into the -BETA lineage.
-          latest_tag=$(git -c versionsort.suffix=- tag --list 'v*' --sort=-v:refname | head -n 1 || true)
-          latest_version="${latest_tag#v}"
-          if [[ -n "$latest_tag" && "$latest_version" =~ ^[0-9]+(\.[0-9]+){0,2}([-+].*)?$ ]]; then
-            current="$latest_version"
-          fi
-
           override="${OVERRIDE// /}"
           if [[ -n "$override" ]]; then
-            if [[ ! "$override" =~ ^[0-9]+(\.[0-9]+){0,2}([-+].*)?$ ]]; then
-              echo "::error::version '$override' must be 1 to 3 numeric components with an optional -suffix"
+            if [[ ! "$override" =~ ^[0-9]+\.[0-9]+\.[0-9]+([-+].*)?$ ]]; then
+              echo "::error::version '$override' must be three numeric components with an optional -suffix, such as 1.4.0"
               exit 1
             fi
             next="$override"
+            echo "Cutting release v${next}"
           else
-            core="${current%%[-+]*}"
-            suffix="${current#"$core"}"
-            if [[ ! "$core" =~ ^[0-9]+(\.[0-9]+){0,2}$ ]]; then
-              echo "::error::version '$current' must be 1 to 3 numeric components with an optional -suffix"
-              exit 1
-            fi
-
-            IFS=. read -r -a parts <<< "$core"
-            depth=${#parts[@]}
-            major="${parts[0]}"
-            minor="${parts[1]:-0}"
-            patch="${parts[2]:-0}"
-
-            case "$LEVEL" in
-              major)
-                major=$((major + 1)); minor=0; patch=0
-                ;;
-              minor)
-                minor=$((minor + 1)); patch=0
-                if (( depth < 2 )); then depth=2; fi
-                ;;
-              patch)
-                patch=$((patch + 1))
-                depth=3
-                ;;
-              release)
-                if [[ -z "$suffix" ]]; then
-                  echo "::error::v${current} is already a full release; use major, minor or patch instead"
-                  exit 1
-                fi
-                suffix=""
-                ;;
-              *)
-                echo "::error::unknown bump level '$LEVEL'"
-                exit 1
-                ;;
-            esac
-
-            case "$depth" in
-              1) next="${major}${suffix}" ;;
-              2) next="${major}.${minor}${suffix}" ;;
-              *) next="${major}.${minor}.${patch}${suffix}" ;;
-            esac
+            # Tags are the source of truth: the release commit is never pushed back,
+            # so nothing has to be committed to move the counter along. The sort is
+            # numeric because v10 has to outrank v9.
+            last=$(git tag --list 'v*' | grep -E '^v[0-9]+$' | cut -c2- | sort -n | tail -n 1 || true)
+            next=$(( ${last:-0} + 1 ))
+            echo "Build ${next}, after ${last:+v}${last:-no previous build}"
           fi
 
           if git rev-parse -q --verify "refs/tags/v${next}" >/dev/null; then
@@ -218,50 +104,115 @@ jobs:
             exit 1
           fi
 
-          # A suffix-free version is the only thing published as a full release.
-          if [[ "$next" =~ ^[0-9]+(\.[0-9]+){0,2}$ ]]; then
+          # A bare x.x.x is the only thing published as a full release, which
+          # leaves every build number and every suffixed semver a pre-release.
+          if [[ "$next" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
             prerelease=false
           else
             prerelease=true
           fi
 
-          sed -i -E "s|^mod_version=.*|mod_version=${next}|" gradle.properties
           echo "version=${next}" >> "$GITHUB_OUTPUT"
           echo "prerelease=${prerelease}" >> "$GITHUB_OUTPUT"
-          echo "Releasing v${next} (prerelease=${prerelease}), was ${current}"
+          echo "Publishing v${next} (prerelease=${prerelease})"
 
+  build:
+    name: Build ${{ matrix.version }}
+    needs: [targets, version]
+    runs-on: ubuntu-latest
+    # A cold decompile of Minecraft takes ~20 minutes; anything past an hour is hung rather
+    # than slow.
+    timeout-minutes: 60
+    strategy:
+      # A release with a jar missing is worse than a release that fails outright, but seeing
+      # which targets broke is worth more than stopping at the first one.
+      fail-fast: false
+      matrix:
+        include: ${{ fromJSON(needs.targets.outputs.matrix) }}
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+
+      # cache-read-only is false here: main is the only branch allowed to
+      # populate the shared caches that every pull request build reads.
+      - name: Set up build environment
+        id: build-env
+        uses: ./.github/actions/gradle-build-env
+        with:
+          version: ${{ matrix.version }}
+          java-version: ${{ matrix.java }}
+          toolchain-cache-path: ${{ matrix.cache }}
+          cache-read-only: 'false'
+
+      # The version is passed in rather than written into gradle.properties: one -P override
+      # reaches every target, and the release commit is never pushed back anyway.
+      #
+      # -PmcVersions keeps Gradle from even configuring the other targets, whose toolchain
+      # plugins want a different JDK from the one this job installed.
       - name: Build
-        run: ./gradlew build --no-daemon --stacktrace
+        run: >-
+          ./gradlew :versions:${{ matrix.version }}:build
+          -PmcVersions=${{ matrix.version }}
+          -Pmod_version=${{ needs.version.outputs.version }}
+          --no-daemon --stacktrace
 
       # Only main writes this one, and only when the restore missed. The path
       # must stay in step with the restore in .github/actions/gradle-build-env.
-      - name: Save ForgeGradle cache
-        if: steps.build-env.outputs.forge-cache-hit != 'true'
+      - name: Save toolchain cache
+        if: steps.build-env.outputs.toolchain-cache-hit != 'true'
         uses: actions/cache/save@v6
         with:
-          path: ~/.gradle/caches/forge_gradle
-          key: ${{ steps.build-env.outputs.forge-cache-key }}
-
-      - name: Create release
-        env:
-          GH_TOKEN: ${{ github.token }}
-          VERSION: ${{ steps.version.outputs.version }}
-          PRERELEASE: ${{ steps.version.outputs.prerelease }}
-        run: |
-          set -euo pipefail
-          flags=()
-          if [[ "$PRERELEASE" == true ]]; then
-            flags+=(--prerelease)
-          fi
-          gh release create "v${VERSION}" build/libs/*.jar \
-            --title "v${VERSION}" \
-            --target "${GITHUB_SHA}" \
-            --generate-notes \
-            "${flags[@]}"
+          path: ${{ matrix.cache }}
+          key: ${{ steps.build-env.outputs.toolchain-cache-key }}
 
       - name: Upload mod jar
         uses: actions/upload-artifact@v7
         with:
-          name: colonyweb-jar
-          path: build/libs/*.jar
+          name: jars-${{ matrix.version }}
+          path: versions/${{ matrix.version }}/build/libs/*.jar
           if-no-files-found: error
+
+  # One tag, one release, every version's jar attached to it.
+  release:
+    name: Publish release
+    needs: [version, build]
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+
+      - name: Collect every version's jar
+        uses: actions/download-artifact@v7
+        with:
+          pattern: jars-*
+          merge-multiple: true
+          path: dist
+
+      - name: Create release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ needs.version.outputs.version }}
+          PRERELEASE: ${{ needs.version.outputs.prerelease }}
+        run: |
+          set -euo pipefail
+
+          # An empty dist would otherwise publish a release with nothing to download.
+          count=$(find dist -name '*.jar' | wc -l)
+          if (( count == 0 )); then
+            echo "::error::no jars were built"
+            exit 1
+          fi
+          echo "Attaching ${count} jar(s):"
+          find dist -name '*.jar' -printf '  %f\n'
+
+          flags=()
+          if [[ "$PRERELEASE" == true ]]; then
+            flags+=(--prerelease)
+          fi
+          gh release create "v${VERSION}" dist/*.jar \
+            --title "v${VERSION}" \
+            --target "${GITHUB_SHA}" \
+            --generate-notes \
+            "${flags[@]}"

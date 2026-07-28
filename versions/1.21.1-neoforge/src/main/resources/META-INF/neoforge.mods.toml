@@ -1,0 +1,44 @@
+# The NeoForge counterpart of versions/1.20.1-forge/src/main/resources/META-INF/mods.toml.
+# NeoForge reads META-INF/neoforge.mods.toml and spells dependency strength as type = "required"
+# / "optional" rather than mandatory = true / false; everything else is the same file.
+modLoader = "javafml"
+loaderVersion = "${loader_version_range}"
+license = "${mod_license}"
+
+[[mods]]
+modId = "${mod_id}"
+version = "${mod_version}"
+displayName = "${mod_name}"
+authors = "${mod_authors}"
+description = '''${mod_description}'''
+
+[[dependencies."${mod_id}"]]
+modId = "neoforge"
+type = "required"
+versionRange = "${neoforge_version_range}"
+ordering = "NONE"
+side = "SERVER"
+
+[[dependencies."${mod_id}"]]
+modId = "minecraft"
+type = "required"
+# A minimum of the current Minecraft version up to but not including the next major version.
+versionRange = "${minecraft_version_range}"
+ordering = "NONE"
+side = "SERVER"
+
+# MineColonies is required for the dashboard to have data to show, but the mod loads without it.
+[[dependencies."${mod_id}"]]
+modId = "minecolonies"
+type = "optional"
+versionRange = "[1.0,)"
+ordering = "AFTER"
+side = "SERVER"
+
+# Domum Ornamentum provides the dynamically textured decorative blocks used by MineColonies builds.
+[[dependencies."${mod_id}"]]
+modId = "domum_ornamentum"
+type = "optional"
+versionRange = "[1.0,)"
+ordering = "AFTER"
+side = "SERVER"

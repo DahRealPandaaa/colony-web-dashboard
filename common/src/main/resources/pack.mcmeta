@@ -1,0 +1,6 @@
+{
+    "pack": {
+        "description": "Colony Web resources",
+        "pack_format": ${pack_format}
+    }
+}

@@ -1,11 +1,14 @@
 name: PR Build
 
-# Verifies that a pull request still compiles before it can be merged into main.
+# Verifies that a pull request still compiles on every supported Minecraft version before it can
+# be merged into main.
 on:
   pull_request:
     branches: [main]
 
 permissions:
+  # actions: read is what lets the toolchain cache be restored. A pull request
+  # never writes one back, so read is all it needs.
   actions: read
   contents: read
 
@@ -15,32 +18,61 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  build:
-    name: Build mod jar
+  # Which Minecraft versions exist is a property of the versions/ directory, not of this file, so
+  # adding one never means editing a workflow.
+  targets:
+    name: Resolve build targets
     runs-on: ubuntu-latest
-    # A cold ForgeGradle run decompiles Minecraft and takes ~20 minutes; anything
-    # past an hour is hung rather than slow.
+    outputs:
+      matrix: ${{ steps.targets.outputs.matrix }}
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+
+      - name: Discover build targets
+        id: targets
+        uses: ./.github/actions/build-targets
+
+  build:
+    name: Build ${{ matrix.version }}
+    needs: targets
+    runs-on: ubuntu-latest
+    # A cold decompile of Minecraft takes ~20 minutes; anything past an hour is hung rather
+    # than slow.
     timeout-minutes: 60
+    strategy:
+      # One version failing should not hide whether the others still build.
+      fail-fast: false
+      matrix:
+        include: ${{ fromJSON(needs.targets.outputs.matrix) }}
 
     steps:
       - name: Check out repository
         uses: actions/checkout@v7
 
       # cache-read-only: pull requests read the caches main populates but never
-      # write per-branch copies of a 1.5 GB ForgeGradle cache back.
+      # write per-branch copies of a multi-gigabyte toolchain cache back.
       - name: Set up build environment
         uses: ./.github/actions/gradle-build-env
         with:
+          version: ${{ matrix.version }}
+          java-version: ${{ matrix.java }}
+          toolchain-cache-path: ${{ matrix.cache }}
           cache-read-only: 'true'
 
+      # -PmcVersions keeps Gradle from even configuring the other targets, whose toolchain
+      # plugins want a different JDK from the one this job installed.
       - name: Build
-        run: ./gradlew build --no-daemon --stacktrace
+        run: >-
+          ./gradlew :versions:${{ matrix.version }}:build
+          -PmcVersions=${{ matrix.version }}
+          --no-daemon --stacktrace
 
       # Lets a reviewer drop the jar straight into a test instance.
       - name: Upload mod jar
         uses: actions/upload-artifact@v7
         with:
-          name: colonyweb-jar-pr-${{ github.event.pull_request.number }}
-          path: build/libs/*.jar
+          name: colonyweb-${{ matrix.version }}-pr-${{ github.event.pull_request.number }}
+          path: versions/${{ matrix.version }}/build/libs/*.jar
           if-no-files-found: error
           retention-days: 14
