@@ -1,0 +1,58 @@
+name: Build targets
+description: >-
+  The Minecraft versions this checkout can build, as a job matrix. Derived from the versions/
+  directory itself, so supporting another Minecraft version needs no workflow edit at all.
+
+outputs:
+  matrix:
+    description: >-
+      JSON array of {version, java, cache} objects, ready for strategy.matrix.include via fromJSON.
+      "version" is the versions/ directory name, "java" the JDK that target's toolchain wants, and
+      "cache" the directory its loader toolchain decompiles Minecraft into.
+    value: ${{ steps.discover.outputs.matrix }}
+
+runs:
+  using: composite
+  steps:
+    - name: Discover build targets
+      id: discover
+      shell: bash
+      run: |
+        set -euo pipefail
+
+        # java_version and loader live in each target's gradle.properties because the Gradle build
+        # needs them there anyway; reading them here keeps the JDK a workflow installs and the JDK a
+        # toolchain demands from ever disagreeing.
+        #
+        # The cache directory is the one thing CI knows that the build does not: each loader's
+        # toolchain decompiles Minecraft somewhere different, and neither location is covered by
+        # setup-gradle. A new version of a loader already listed here needs no edit; a genuinely new
+        # loader needs one line.
+        matrix=$(for dir in versions/*/; do
+          name=$(basename "$dir")
+          [[ -f "${dir}build.gradle" && -f "${dir}gradle.properties" ]] || continue
+
+          property() { grep -E "^$1=" "${dir}gradle.properties" | cut -d= -f2- | tr -d '[:space:]'; }
+          java=$(property java_version)
+          loader=$(property loader)
+
+          case "$loader" in
+            forge)    cache='~/.gradle/caches/forge_gradle' ;;     # ForgeGradle, ~1.5 GB
+            neoforge) cache='~/.gradle/caches/neoformruntime' ;;   # ModDevGradle, ~300 MB
+            *)        echo "::error::versions/${name}: unknown loader '${loader}'"; exit 1 ;;
+          esac
+          if [[ -z "$java" ]]; then
+            echo "::error::versions/${name}/gradle.properties has no java_version"
+            exit 1
+          fi
+
+          printf '{"version":"%s","java":"%s","cache":"%s"}\n' "$name" "$java" "$cache"
+        done | jq -s -c .)
+
+        if [[ "$matrix" == "[]" ]]; then
+          echo "::error::no buildable targets found under versions/"
+          exit 1
+        fi
+
+        echo "matrix=${matrix}" >> "$GITHUB_OUTPUT"
+        echo "Building: $(jq -r 'map(.version) | join(", ")' <<<"$matrix")"

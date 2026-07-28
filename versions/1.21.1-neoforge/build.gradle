@@ -1,0 +1,101 @@
+plugins {
+    id 'eclipse'
+    id 'idea'
+    id 'net.neoforged.moddev' version '2.0.142'
+}
+
+// Identity, source sets, resource templating and the LDTTeam repository.
+apply from: "$rootDir/gradle/mod-common.gradle"
+
+// MineColonies and its mandatory support mods, for runClient/runServer only. ColonyWeb integrates
+// through reflection, so they never reach the compile classpath and are not bundled into the
+// published jar — this configuration exists purely to resolve the jars so they can be staged.
+//
+// A run dependency is not enough on NeoForge. FML discovers mods in the run directory's mods/
+// folder and through MOD_CLASSES, which ModDevGradle fills with this project's own source sets;
+// a mod jar merely on a run's classpath is loaded as an ordinary library and never registers, so
+// the game starts without MineColonies and every scanner finds nothing. ForgeGradle's fg.deobf
+// runtimeOnly does scan the classpath, which is why the 1.20.1 project gets away with declaring
+// these as plain dependencies and this one has to copy files.
+configurations {
+    devMods {
+        canBeConsumed = false
+        canBeResolved = true
+    }
+}
+
+dependencies {
+    // Declared one by one, and non-transitively, because MineColonies' POM also pulls in JEI and
+    // a 1.20.4 datagenerators artifact that a 1.21.1 dev runtime has no use for.
+    devMods("com.ldtteam:minecolonies:${minecolonies_version}") { transitive = false }
+    devMods("com.ldtteam:structurize:${structurize_version}") { transitive = false }
+    devMods("com.ldtteam:blockui:${blockui_version}") { transitive = false }
+    devMods("com.ldtteam:multipiston:${multipiston_version}") { transitive = false }
+    // 1.21 renamed the artifact from domum_ornamentum to domum-ornamentum and dropped the
+    // universal classifier the 1.20.1 build needs.
+    devMods("com.ldtteam:domum-ornamentum:${domum_version}") { transitive = false }
+}
+
+// One staging task per run directory, so the client and the server keep the separate mods folders
+// that let them run at the same time. Optional mods dropped in by hand are left alone: only jars
+// this configuration itself put there are ever removed again.
+def stageDevMods(String runDirectory) {
+    return tasks.register("stage${runDirectory.split('-')*.capitalize().join()}Mods", Copy) {
+        group = 'minecraft'
+        description = "Stages the MineColonies mod set into ${runDirectory}/mods."
+        from configurations.devMods
+        into project.file("${runDirectory}/mods")
+        doFirst {
+            // Clear out an earlier staging first, so bumping a version in gradle.properties does
+            // not leave the run directory holding both jars and FML refusing to start on the
+            // duplicate mod id.
+            def staged = configurations.devMods.resolvedConfiguration.resolvedArtifacts
+                    *.moduleVersion*.id*.name
+            delete(fileTree("${runDirectory}/mods") { include '*.jar' }
+                    .filter { jar -> staged.any { name -> jar.name.startsWith("${name}-") } }
+                    .files)
+        }
+    }
+}
+
+def stageClientMods = stageDevMods('run-client')
+def stageServerMods = stageDevMods('run-server')
+
+neoForge {
+    version = neoforge_version
+
+    // NeoForge runs on Mojang's official names, the same mappings the 1.20.1 project maps to,
+    // which is what lets common/ compile against both without a preprocessor. There is also no
+    // reobfuscation step here for the same reason.
+
+    mods {
+        "${mod_id}" {
+            sourceSet sourceSets.main
+        }
+    }
+
+    runs {
+        client {
+            client()
+            // Keep the integrated-client world separate from the dedicated server so both
+            // development sessions can run at the same time.
+            gameDirectory = project.file('run-client')
+            // taskBefore rather than dependsOn so that a run started from an IDE's generated
+            // configuration stages the mods too, not only ./gradlew runClient.
+            taskBefore stageClientMods
+        }
+
+        server {
+            server()
+            gameDirectory = project.file('run-server')
+            programArgument '--nogui'
+            taskBefore stageServerMods
+        }
+
+        // Data generation runs against ColonyWeb alone, so it needs no mods staged.
+        data {
+            clientData()
+            gameDirectory = project.file('run-data')
+        }
+    }
+}

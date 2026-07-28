@@ -5,6 +5,10 @@ pluginManagement {
             name = 'MinecraftForge'
             url = 'https://maven.minecraftforge.net/'
         }
+        maven {
+            name = 'NeoForged'
+            url = 'https://maven.neoforged.net/releases'
+        }
     }
 }
 
@@ -13,3 +17,31 @@ plugins {
 }
 
 rootProject.name = 'colonyweb'
+
+// Every versions/<minecraft-version>-<loader>/ directory holding a build.gradle is a build
+// target. Supporting another Minecraft version means adding a directory — nothing here changes.
+//
+// -PmcVersions=1.21.1-neoforge narrows the build to a single target, and narrows *configuration*
+// with it, so a JDK 17 job never has to configure a project whose toolchain plugin wants JDK 21.
+// That is how CI keeps each matrix leg on one JDK; comma-separate to select several.
+def requested = providers.gradleProperty('mcVersions').orNull?.split(',')*.trim()?.findAll { it }
+
+def discovered = []
+file('versions').eachDir { dir ->
+    if (!new File(dir, 'build.gradle').exists()) {
+        return
+    }
+    if (requested && !requested.contains(dir.name)) {
+        return
+    }
+    discovered << dir.name
+    include ":versions:${dir.name}"
+}
+
+if (requested) {
+    def missing = requested - discovered
+    if (missing) {
+        throw new GradleException("Unknown Minecraft target(s) ${missing.join(', ')}. " +
+                "Available: ${file('versions').listFiles({ f -> new File(f, 'build.gradle').exists() } as FileFilter)*.name.sort().join(', ')}")
+    }
+}
