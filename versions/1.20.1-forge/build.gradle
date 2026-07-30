@@ -2,10 +2,35 @@ plugins {
     id 'eclipse'
     id 'idea'
     id 'net.minecraftforge.gradle' version '[6.0.16,6.2)'
+    id 'org.jetbrains.kotlin.jvm'
+    id 'org.jetbrains.kotlin.plugin.serialization'
 }
 
 // Identity, source sets, resource templating and the LDTTeam repository.
 apply from: "$rootDir/gradle/mod-common.gradle"
+
+import groovy.json.JsonOutput
+import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
+
+tasks.withType(KotlinCompile).configureEach {
+    kotlinOptions.jvmTarget = java_version as int
+    kotlinOptions.freeCompilerArgs += ['-Xjvm-default=all']
+}
+
+// Libraries the embedded web server needs at runtime. ForgeGradle does not put
+// implementation deps on the game classpath, so these are nested in the mod jar
+// AND placed on the dev classpath via minecraft_classpath.
+// kotlin/kotlinx/slf4j are excluded — KFF 4.11.0 provides kotlin stdlib and
+// shades some coroutines packages; Minecraft provides slf4j.
+configurations {
+    bundledLibs {
+        canBeConsumed = false
+        canBeResolved = true
+        exclude group: 'org.jetbrains.kotlin'
+        exclude group: 'org.jetbrains.kotlinx'
+        exclude group: 'org.slf4j'
+    }
+}
 
 minecraft {
     // The mappings can be changed at any time and must be in the following format.
@@ -40,6 +65,13 @@ minecraft {
             // You can set various levels here.
             // Please read: https://stackoverflow.com/questions/2031163/when-to-use-the-different-log-levels
             property 'forge.logging.console.level', 'debug'
+
+            // Dev-time counterpart of META-INF/jarjar.
+            lazyToken('minecraft_classpath') {
+                configurations.bundledLibs.resolve()
+                        .collect { it.absolutePath }
+                        .join(File.pathSeparator)
+            }
 
             mods {
                 "${mod_id}" {
@@ -82,22 +114,49 @@ minecraft {
 
 dependencies {
     minecraft "net.minecraftforge:forge:${minecraft_version}-${forge_version}"
+    compileOnly 'org.jetbrains.kotlin:kotlin-stdlib-jdk8:2.0.20'
 
-    // Load MineColonies and its mandatory support mods in runClient/runServer. ColonyWeb still
-    // integrates through reflection, so these stay off the compile classpath and are not bundled
-    // in the published ColonyWeb jar.
+    implementation 'org.nanohttpd:nanohttpd:2.3.1'
+    bundledLibs 'org.nanohttpd:nanohttpd:2.3.1'
+
+    // MineColonies and support mods — runtime only, not bundled.
     runtimeOnly fg.deobf("com.ldtteam:minecolonies:${minecraft_version}-${minecolonies_version}")
     runtimeOnly fg.deobf("com.ldtteam:structurize:${structurize_version}")
     runtimeOnly fg.deobf("com.ldtteam:blockui:${blockui_version}")
     runtimeOnly fg.deobf("com.ldtteam:multipiston:${multipiston_version}")
-    // Domum Ornamentum publishes its runnable 1.20.1 jar with the universal classifier.
     runtimeOnly fg.deobf("com.ldtteam:domum_ornamentum:${minecraft_version}-${domum_version}:universal")
-    //
-    // Additional optional mods can still be dropped into the selected run directory's mods folder.
+    runtimeOnly fg.deobf("thedarkcolour:kotlinforforge:4.11.0")
 }
 
-// Forge 1.20.1 ships obfuscated at runtime, so the jar has to be mapped back. NeoForge does not,
-// which is why this step has no counterpart in the 1.21.1 project.
+// Stage nested jars and write metadata.json. ForgeGradle's jarJar task emits a second
+// -all archive, but the release workflow uploads every jar in build/libs — folding into
+// the main jar keeps one artifact under one name.
+def bundleLibs = tasks.register('bundleLibs', Sync) {
+    group = 'build'
+    description = 'Stages the embedded web server libraries as META-INF/jarjar entries.'
+    into layout.buildDirectory.dir('jarjar')
+    from(configurations.bundledLibs) { into 'META-INF/jarjar' }
+
+    doLast {
+        // Anything absent from this index is ignored by the loader, so it is written from the same
+        // resolved graph the jars themselves came from. The range stays open above the bundled
+        // version: if another mod ships a newer Ktor, ColonyWeb is happy to use it rather than
+        // forcing two copies into the game.
+        def jars = configurations.bundledLibs.resolvedConfiguration.resolvedArtifacts
+                .collect { artifact ->
+                    def id = artifact.moduleVersion.id
+                    [identifier  : [group: id.group, artifact: id.name],
+                     version     : [range: "[${id.version},)".toString(), artifactVersion: id.version],
+                     path        : "META-INF/jarjar/${artifact.file.name}".toString(),
+                     isObfuscated: false]
+                }
+        new File(destinationDir, 'META-INF/jarjar/metadata.json')
+                .setText(JsonOutput.prettyPrint(JsonOutput.toJson([jars: jars])), 'UTF-8')
+    }
+}
+
+// Reobfuscate — Forge ships obfuscated. Nested library jars are unaffected.
 tasks.named('jar', Jar).configure {
+    from bundleLibs
     finalizedBy 'reobfJar'
 }
