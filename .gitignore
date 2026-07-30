@@ -25,6 +25,9 @@ logs/
 /colonyweb/
 /colonyweb-cache/
 
+# Claude
+.claude/
+
 # IDE files
 .idea/
 *.iml
