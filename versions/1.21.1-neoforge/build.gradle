@@ -99,3 +99,10 @@ neoForge {
         }
     }
 }
+
+// The shared unit tests in common/src/test/java exercise code that compiles against Minecraft, so
+// the test source set needs the same modding classpath the main one has — Gson and the logging
+// facade among the rest. ForgeGradle puts Minecraft on `implementation`, which `testImplementation`
+// extends, so the 1.20.1 project gets this for free; ModDevGradle scopes it per source set and has
+// to be asked. It has to come after the neoForge block, which is what enables modding at all.
+neoForge.addModdingDependenciesTo(sourceSets.test)

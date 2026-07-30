@@ -1,0 +1,115 @@
+name: PR Tests
+
+# Runs the unit test suite on every supported Minecraft version before a pull request can be
+# merged into main. Kept separate from PR Build so a red tick says which of the two broke without
+# anyone opening the logs, and so the test report is uploaded whether or not the jar builds.
+on:
+  pull_request:
+    branches: [main]
+
+permissions:
+  # actions: read is what lets the toolchain cache be restored. A pull request
+  # never writes one back, so read is all it needs.
+  actions: read
+  contents: read
+
+# Superseded runs are useless, so drop them when new commits arrive.
+concurrency:
+  group: pr-tests-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  # Which Minecraft versions exist is a property of the versions/ directory, not of this file, so
+  # adding one never means editing a workflow.
+  targets:
+    name: Resolve test targets
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.targets.outputs.matrix }}
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+
+      - name: Discover build targets
+        id: targets
+        uses: ./.github/actions/build-targets
+
+  test:
+    name: Test ${{ matrix.version }}
+    needs: targets
+    runs-on: ubuntu-latest
+    # The suite itself takes seconds; the budget is almost entirely a cold decompile of
+    # Minecraft, which the toolchain cache normally avoids.
+    timeout-minutes: 60
+    strategy:
+      # One version failing should not hide whether the suite still passes on the others: the
+      # whole point of running it per target is catching code that only works on one of them.
+      fail-fast: false
+      matrix:
+        include: ${{ fromJSON(needs.targets.outputs.matrix) }}
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+
+      # cache-read-only: pull requests read the caches main populates but never
+      # write per-branch copies of a multi-gigabyte toolchain cache back.
+      - name: Set up build environment
+        uses: ./.github/actions/gradle-build-env
+        with:
+          version: ${{ matrix.version }}
+          java-version: ${{ matrix.java }}
+          toolchain-cache-path: ${{ matrix.cache }}
+          cache-read-only: 'true'
+
+      # -PmcVersions keeps Gradle from even configuring the other targets, whose toolchain
+      # plugins want a different JDK from the one this job installed.
+      - name: Run unit tests
+        run: >-
+          ./gradlew :versions:${{ matrix.version }}:test
+          -PmcVersions=${{ matrix.version }}
+          --no-daemon --stacktrace
+
+      # A failing assertion is far easier to read from the HTML report than from a log, so it is
+      # uploaded whether the run passed or not.
+      - name: Upload test report
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: test-report-${{ matrix.version }}
+          path: |
+            versions/${{ matrix.version }}/build/reports/tests/test
+            versions/${{ matrix.version }}/build/test-results/test
+          if-no-files-found: warn
+          retention-days: 14
+
+      # Puts the counts on the run's summary page, so a reviewer sees what passed without
+      # downloading anything.
+      - name: Summarise results
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          results="versions/${{ matrix.version }}/build/test-results/test"
+          if [[ ! -d "$results" ]]; then
+            echo "No test results for ${{ matrix.version }} — the suite did not run." >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+
+          # The JUnit XML each Gradle test task writes carries the totals as attributes; summing
+          # them beats parsing Gradle's console output, which changes between versions. awk has to
+          # end its line, or read hits EOF without a newline, returns non-zero and trips set -e.
+          read -r tests failures errors skipped < <(
+            grep -ho 'tests="[0-9]*"\|failures="[0-9]*"\|errors="[0-9]*"\|skipped="[0-9]*"' "$results"/*.xml \
+              | awk -F'"' '{ sum[$1] += $2 } END {
+                  printf "%d %d %d %d\n", sum["tests="], sum["failures="], sum["errors="], sum["skipped="]
+                }'
+          )
+
+          {
+            echo "### ${{ matrix.version }} (JDK ${{ matrix.java }})"
+            echo
+            echo "| Tests | Failures | Errors | Skipped |"
+            echo "| ----: | -------: | -----: | ------: |"
+            echo "| $tests | $failures | $errors | $skipped |"
+          } >> "$GITHUB_STEP_SUMMARY"
