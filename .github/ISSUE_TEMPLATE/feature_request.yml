@@ -1,0 +1,78 @@
+﻿name: Feature request
+description: Suggest something new, or an improvement to something that already exists.
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for the suggestion. Ideas about what the dashboard should *show* are especially
+        welcome — the data is usually already there.
+
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Before you start
+      options:
+        - label: I searched the [existing issues](https://github.com/DahRealPandaaa/colony-web-dashboard/issues?q=is%3Aissue) and this has not been suggested.
+          required: true
+
+  - type: textarea
+    id: what
+    attributes:
+      label: What would you like?
+      description: Describe the feature or the change as concretely as you can.
+      placeholder: |
+        A notification when a colony comes under attack, so I do not have to keep the Combat tab
+        open to notice a raid.
+    validations:
+      required: true
+
+  - type: textarea
+    id: why
+    attributes:
+      label: What problem does it solve?
+      description: >-
+        What you are trying to do today, and why the dashboard makes it awkward. This is the part
+        that decides whether a suggestion gets built, and it often turns out there is a simpler
+        answer than the one you had in mind.
+      placeholder: |
+        I run a server with several colonies and only find out about a raid after it is over,
+        because nothing tells me unless I happen to be looking at the right tab.
+    validations:
+      required: true
+
+  - type: dropdown
+    id: area
+    attributes:
+      label: Which part of the dashboard?
+      options:
+        - Overview
+        - Map
+        - Buildings
+        - Citizens
+        - Research
+        - Combat
+        - Warehouse
+        - Item icons / textures
+        - Accounts and access control
+        - Somewhere else / a new tab
+    validations:
+      required: false
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives you have considered
+      description: Other ways of solving it, including anything you already tried.
+    validations:
+      required: false
+
+  - type: textarea
+    id: extra
+    attributes:
+      label: Anything else
+      description: >-
+        Mock-ups, screenshots of how another mod or tool does it, or a link to the MineColonies
+        feature involved. Drag images straight in.
+    validations:
+      required: false

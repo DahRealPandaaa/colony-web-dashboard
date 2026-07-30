@@ -1,0 +1,14 @@
+﻿# Only the two forms above are offered, so every report arrives with the version, the log or the
+# screenshot already attached. Anything that fits neither is still reachable through the links.
+blank_issues_enabled: false
+
+contact_links:
+  - name: Setup and configuration help
+    url: https://github.com/DahRealPandaaa/colony-web-dashboard#configuration
+    about: Port, bind address, sign-in codes and access control are documented in the README.
+
+  - name: Dashboard unreachable in a browser
+    url: https://github.com/DahRealPandaaa/colony-web-dashboard#hosting--networking-notes
+    about: >-
+      A port clash with the game, a bindAddress the machine does not own, or a firewall accounts
+      for most of these. Check here first, then open a bug report if it still will not load.
