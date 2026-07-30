@@ -1,0 +1,119 @@
+﻿name: Bug report
+description: Something in the dashboard is broken or wrong.
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to report this.
+
+        **ColonyWeb runs on the server only**, so the logs and the version that matter are the
+        server's, not your client's — even in single player, where the integrated server writes
+        the same file.
+
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Before you start
+      options:
+        - label: I searched the [existing issues](https://github.com/DahRealPandaaa/colony-web-dashboard/issues?q=is%3Aissue) and this has not been reported.
+          required: true
+        - label: I am on the latest ColonyWeb release for my Minecraft version.
+          required: false
+
+  - type: dropdown
+    id: target
+    attributes:
+      label: Minecraft version and loader
+      options:
+        - 1.20.1 (Forge)
+        - 1.21.1 (NeoForge)
+        - Other / not listed
+    validations:
+      required: true
+
+  - type: input
+    id: colonyweb-version
+    attributes:
+      label: ColonyWeb version
+      description: The jar's version, e.g. `colonyweb-1.20.1-forge-1.0.0.jar`.
+      placeholder: "1.0.0"
+    validations:
+      required: true
+
+  - type: input
+    id: minecolonies-version
+    attributes:
+      label: MineColonies version
+      description: >-
+        The jar's version, e.g. `minecolonies-1.1.1319-1.21.1.jar`. If you are using a
+        snapshot or a custom build, please include the full version string.
+      placeholder: "1.1.1319-1.21.1"
+    validations:
+      required: true
+
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened?
+      description: >-
+        What you did, what you expected, and what you got instead. If it only affects one tab or
+        one building, say which.
+      placeholder: |
+        Opened the Buildings tab and every card shows "Built by Builder", even for buildings
+        that are only queued. I expected them to show as unclaimed.
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      description: What someone else has to do to see it themselves.
+      placeholder: |
+        1. Start a server with ColonyWeb and MineColonies.
+        2. Queue three buildings from the Builder's hut.
+        3. Open the dashboard and go to the Buildings tab.
+    validations:
+      required: false
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Server log
+      description: >-
+        Paste the relevant part of `logs/latest.log` **from the server**, or attach the whole file
+        by dragging it in. Every line this mod writes is prefixed `[ColonyWeb]`, so
+        `grep ColonyWeb logs/latest.log` usually finds what matters. Include any stack trace in
+        full — the first few lines alone rarely identify the cause.
+      render: text
+    validations:
+      required: false
+
+  - type: textarea
+    id: screenshots
+    attributes:
+      label: Screenshots
+      description: >-
+        Drag images straight in. For anything that looks wrong rather than behaves wrong — a
+        broken icon, a mislabelled panel, a layout problem — a screenshot is usually worth more
+        than the description.
+    validations:
+      required: false
+
+  - type: markdown
+    attributes:
+      value: |
+        > **Please attach a log, a screenshot, or both.** Neither field is enforced, because the
+        > right one depends on the bug — but a report with no log and no picture almost always
+        > needs a round trip before anyone can start on it.
+
+  - type: textarea
+    id: extra
+    attributes:
+      label: Anything else
+      description: >-
+        Other mods installed, whether the dashboard is behind a reverse proxy, a non-default
+        `httpPort` or `bindAddress` — anything you think might matter.
+    validations:
+      required: false
