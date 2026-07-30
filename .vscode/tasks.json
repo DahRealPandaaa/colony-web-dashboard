@@ -1,8 +1,6 @@
 {
     "version": "2.0.0",
-    // Run configurations belong to a version project, so every task is addressed by project path.
-    // Pick which Minecraft version to run from the prompt; add new ones to the "mcVersion" input
-    // at the bottom when a versions/ directory is added.
+    // ── Shared input: pick which Minecraft version to run ──────────────
     "inputs": [
         {
             "id": "mcVersion",
@@ -15,14 +13,14 @@
             ]
         }
     ],
+    // ── Tasks ─────────────────────────────────────────────────────────
     "tasks": [
+        // Use "process" (not "shell") so PowerShell doesn't mangle
+        // "-PmcVersions=1.20.1-forge" into "-PmcVersions=1".
         {
             "label": "Minecraft: Run Client (Singleplayer)",
-            "type": "shell",
-            "command": "${workspaceFolder}/gradlew",
-            "windows": {
-                "command": "${workspaceFolder}\\gradlew.bat"
-            },
+            "type": "process",
+            "command": "${workspaceFolder}\\gradlew.bat",
             "args": [
                 ":versions:${input:mcVersion}:runClient",
                 "-PmcVersions=${input:mcVersion}",
@@ -45,11 +43,8 @@
         },
         {
             "label": "Minecraft: Run Dedicated Server",
-            "type": "shell",
-            "command": "${workspaceFolder}/gradlew",
-            "windows": {
-                "command": "${workspaceFolder}\\gradlew.bat"
-            },
+            "type": "process",
+            "command": "${workspaceFolder}\\gradlew.bat",
             "args": [
                 ":versions:${input:mcVersion}:runServer",
                 "-PmcVersions=${input:mcVersion}",
@@ -77,11 +72,8 @@
         },
         {
             "label": "Minecraft: Build All Versions",
-            "type": "shell",
-            "command": "${workspaceFolder}/gradlew",
-            "windows": {
-                "command": "${workspaceFolder}\\gradlew.bat"
-            },
+            "type": "process",
+            "command": "${workspaceFolder}\\gradlew.bat",
             "args": [
                 "build",
                 "--console=plain"
