@@ -62,10 +62,14 @@ jobs:
 
       # -PmcVersions keeps Gradle from even configuring the other targets, whose toolchain
       # plugins want a different JDK from the one this job installed.
+      #
+      # -x test because the unit tests are PR Tests' job. Running them here as well would pay for
+      # the same suite twice and report the same failure under two names.
       - name: Build
         run: >-
           ./gradlew :versions:${{ matrix.version }}:build
           -PmcVersions=${{ matrix.version }}
+          -x test
           --no-daemon --stacktrace
 
       # Lets a reviewer drop the jar straight into a test instance.
