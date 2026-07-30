@@ -8,6 +8,7 @@ import com.mojang.logging.LogUtils;
 import net.minecraft.world.item.ItemStack;
 import org.slf4j.Logger;
 
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashSet;
 import java.util.List;
@@ -39,8 +40,7 @@ public final class RecipeScanner {
         for (Object building : buildings) {
             try {
                 for (Object token : tokensOf(building)) {
-                    ItemStack output = outputOf(recipeManager, token);
-                    if (output != null && !output.isEmpty()) {
+                    for (ItemStack output : outputsOf(recipeManager, token)) {
                         craftable.add(DomumOrnamentumResolver.textureKeyFor(output));
                     }
                 }
@@ -82,7 +82,16 @@ public final class RecipeScanner {
         return tokens;
     }
 
-    private ItemStack outputOf(Object recipeManager, Object token) {
+    /**
+     * Everything one learned recipe can produce.
+     *
+     * <p>Domum Ornamentum recipes are the reason this is a list rather than one stack: a cutter
+     * recipe taught through MineColonies is stored as a multi-output recipe whose primary output is
+     * a single shape and whose <em>alternate</em> outputs are every other shape those same
+     * materials cut into. Reading only the primary marks one framed light craftable and leaves the
+     * other six looking unobtainable.</p>
+     */
+    private List<ItemStack> outputsOf(Object recipeManager, Object token) {
         Object byToken = invokeAny(recipeManager, "getRecipe", token).orElse(null);
         if (byToken == null) {
             Object all = invokeAny(recipeManager, "getRecipes").orElse(null);
@@ -90,9 +99,21 @@ public final class RecipeScanner {
                 byToken = map.get(token);
             }
         }
-        return Scan.itemStackOf(Scan.firstNonNull(
+        List<ItemStack> outputs = new ArrayList<>();
+        addOutput(outputs, Scan.firstNonNull(
                 invokeAny(byToken, "getPrimaryOutput").orElse(null),
                 invokeAny(byToken, "getResultItem").orElse(null)));
+        if (invokeAny(byToken, "getAlternateOutputs").orElse(null) instanceof Collection<?> alternates) {
+            alternates.forEach(alternate -> addOutput(outputs, alternate));
+        }
+        return outputs;
+    }
+
+    private static void addOutput(List<ItemStack> outputs, Object candidate) {
+        ItemStack stack = Scan.itemStackOf(candidate);
+        if (stack != null && !stack.isEmpty()) {
+            outputs.add(stack);
+        }
     }
 
     /**

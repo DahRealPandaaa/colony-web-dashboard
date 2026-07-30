@@ -25,7 +25,7 @@ public final class PngCache {
      * {@code webroot/js/api.js} must be bumped alongside this — clearing only the server's copy
      * still leaves every already-loaded page showing the old one.</p>
      */
-    private static final String RENDER_VERSION = "3";
+    private static final String RENDER_VERSION = "4";
 
     private static final String VERSION_FILE = ".render-version";
 

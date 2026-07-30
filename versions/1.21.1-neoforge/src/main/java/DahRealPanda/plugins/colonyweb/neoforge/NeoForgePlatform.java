@@ -8,6 +8,7 @@ import net.minecraft.nbt.CompoundTag;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.world.item.ArmorItem;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.component.BlockItemStateProperties;
 import net.minecraft.world.item.component.CustomData;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.entity.BlockEntity;
@@ -66,6 +67,16 @@ public final class NeoForgePlatform implements Platform {
         // textureData compound now lives.
         CustomData data = stack.get(DataComponents.BLOCK_ENTITY_DATA);
         return data == null ? Optional.empty() : Optional.of(data.copyTag());
+    }
+
+    @Override
+    public Optional<String> blockStateProperty(ItemStack stack, String property) {
+        // 1.20.5 moved the properties a stack pins for the block it places into their own
+        // component, which is where Domum Ornamentum's property-based cut shapes now live.
+        BlockItemStateProperties properties = stack.get(DataComponents.BLOCK_STATE);
+        return properties == null
+                ? Optional.empty()
+                : Optional.ofNullable(properties.properties().get(property));
     }
 
     @Override

@@ -5,6 +5,7 @@ import { iconsState } from "./icons.js";
 import { overviewState } from "./overview.js";
 import { mapState } from "./map.js";
 import { buildingsState } from "./buildings.js";
+import { neededState } from "./needed.js";
 import { citizensState } from "./citizens.js";
 import { researchState } from "./research.js";
 import { combatState } from "./combat.js";
@@ -48,6 +49,12 @@ const TABS = [
         id: "buildings", label: "Buildings", title: "Buildings & decorations",
         subtitle: "What is built and what each site still needs",
         icon: '<path d="M3 21h18"/><path d="M5 21V8l7-5 7 5v13"/><path d="M9 21v-6h6v6"/>',
+    },
+    {
+        id: "needed", label: "Needed", title: "Still needed",
+        subtitle: "What the colony is short of, across every site",
+        icon: '<path d="M4 5h2l2.2 10.2a2 2 0 0 0 2 1.6h6.9a2 2 0 0 0 2-1.5L21 8H7"/>'
+            + '<circle cx="10.5" cy="20" r="1.2"/><circle cx="17.5" cy="20" r="1.2"/>',
     },
     {
         id: "citizens", label: "Citizens", title: "Citizens",
@@ -162,6 +169,7 @@ function coreState() {
         tabCount(id) {
             switch (id) {
                 case "buildings": return this.snap.buildings.length;
+                case "needed": return this.neededAll.length;
                 case "warehouse": return this.snap.warehouse.stacks.length;
                 case "citizens": return this.loaded.citizens ? this.citizens.length : this.stats.citizens;
                 case "research": return this.research ? this.research.completed : null;
@@ -303,6 +311,7 @@ export function dashboard() {
         overviewState(),
         mapState(),
         buildingsState(),
+        neededState(),
         citizensState(),
         researchState(),
         combatState(),

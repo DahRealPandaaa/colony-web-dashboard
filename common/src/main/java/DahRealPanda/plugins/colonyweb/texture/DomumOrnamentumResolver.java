@@ -3,6 +3,7 @@ package DahRealPanda.plugins.colonyweb.texture;
 import DahRealPanda.plugins.colonyweb.colony.MineColoniesReflect;
 import DahRealPanda.plugins.colonyweb.colony.model.MaterialComponent;
 import DahRealPanda.plugins.colonyweb.platform.Platform;
+import DahRealPanda.plugins.colonyweb.util.Text;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.Tag;
@@ -11,16 +12,20 @@ import net.minecraft.world.item.BlockItem;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.Block;
 
+import java.lang.reflect.Method;
+import java.lang.reflect.Modifier;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
 import java.util.TreeMap;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.stream.Collectors;
 
 /**
  * Resolves Domum Ornamentum textured blocks to a stable texture key and to the individual
@@ -39,6 +44,12 @@ import java.util.concurrent.ConcurrentHashMap;
  */
 public final class DomumOrnamentumResolver {
     public static final String DO_NAMESPACE = "domum_ornamentum";
+
+    /** Java package every Domum Ornamentum class lives under, including its shape enums. */
+    private static final String DO_PACKAGE = "com.ldtteam.domumornamentum";
+
+    /** Block class to the getter handing back its shape enum, resolved once per class. */
+    private static final ConcurrentHashMap<Class<?>, Optional<Method>> VARIANT_GETTER = new ConcurrentHashMap<>();
 
     /** Maps a computed texture key (with #hash) to the underlying material block id. */
     private static final ConcurrentHashMap<String, String> VARIANT_MATERIAL = new ConcurrentHashMap<>();
@@ -75,26 +86,121 @@ public final class DomumOrnamentumResolver {
     }
 
     /**
-     * Full texture key for a stack: {@code namespace:path} plus, when NBT is relevant, a
-     * {@code #<8charHash>} suffix so distinct textured variants map to distinct PNGs.
+     * Full texture key for a stack: {@code namespace:path} plus, when the stack carries material
+     * data, a {@code #<8charHash>} suffix so distinct textured variants map to distinct PNGs.
      */
     public static String textureKeyFor(ItemStack stack) {
         ResourceLocation rl = BuiltInRegistries.ITEM.getKey(stack.getItem());
         String base = rl != null ? rl.toString() : "minecraft:air";
-        String fingerprint = isDomum(stack) ? Platform.get().dataFingerprint(stack) : null;
-        if (fingerprint != null) {
-            String hash = hash8(fingerprint);
-            if (hash != null) {
-                String key = base + "#" + hash;
-                Map<String, String> components = componentMaterials(stack);
-                if (!components.isEmpty()) {
-                    VARIANT_COMPONENTS.putIfAbsent(key, components);
-                    primaryMaterial(components).ifPresent(m -> VARIANT_MATERIAL.putIfAbsent(key, m));
-                }
-                return key;
+        if (!isDomum(stack)) {
+            return base;
+        }
+        Map<String, String> components = componentMaterials(stack);
+        String fingerprint = components.isEmpty()
+                ? Platform.get().dataFingerprint(stack)
+                : canonicalFingerprint(components);
+        if (fingerprint == null) {
+            return base;
+        }
+        String hash = hash8(fingerprint);
+        if (hash == null) {
+            return base;
+        }
+        String key = base + "#" + hash;
+        if (!components.isEmpty()) {
+            VARIANT_COMPONENTS.putIfAbsent(key, components);
+            primaryMaterial(components).ifPresent(m -> VARIANT_MATERIAL.putIfAbsent(key, m));
+        }
+        return key;
+    }
+
+    /**
+     * The materials of a DO stack, and nothing else, as a stable string.
+     *
+     * <p>Hashing the raw stack data instead — which is what this used to do — makes the key depend
+     * on everything the stack happens to carry. Two stacks describing the same block with the same
+     * materials then hash differently over an unrelated tag or an empty {@code textureData}
+     * compound (which is exactly what MineColonies writes onto a cutter recipe's output), so the
+     * same block cached twice and a taught recipe never matched the resource a builder asked for.
+     * Sorting the pairs also makes the key identical across loaders, where the same data arrives as
+     * NBT on 1.20.1 and as a data component on 1.21.</p>
+     */
+    private static String canonicalFingerprint(Map<String, String> components) {
+        return new TreeMap<>(components).entrySet().stream()
+                .map(e -> e.getKey() + "=" + e.getValue())
+                .collect(Collectors.joining(";"));
+    }
+
+    /**
+     * The cut shape of a DO block, e.g. {@code "Fancy"} for a fancy framed light.
+     *
+     * <p>A whole family of DO blocks shares one item name — every framed light is "Framed
+     * &lt;centre material&gt;" — and only the shape tells them apart, which is why DO gives it a
+     * tooltip line of its own. Families are modelled one of two ways: a block per shape holding
+     * its own enum, or one block with a {@code type} property that travels on the stack.</p>
+     *
+     * @param displayName the name already shown for the stack; a shape it spells out ("Beige
+     *                    Bricks") is dropped rather than repeated back as "Type: Beige Bricks".
+     */
+    public static Optional<String> variantName(ItemStack stack, String displayName) {
+        if (!isDomum(stack) || !(stack.getItem() instanceof BlockItem blockItem)) {
+            return Optional.empty();
+        }
+        String variant = variantFromBlock(blockItem.getBlock())
+                // 1.20.1 stores the property value as the enum constant ("PLAIN"), 1.21 as its
+                // serialized name ("plain"); lower-casing first makes both humanize the same.
+                .or(() -> Platform.get().blockStateProperty(stack, "type")
+                        .map(value -> Text.humanize(value.toLowerCase(Locale.ROOT))))
+                .orElse(null);
+        if (variant == null || variant.isBlank()) {
+            return Optional.empty();
+        }
+        if (displayName != null && displayName.toLowerCase(Locale.ROOT).contains(variant.toLowerCase(Locale.ROOT))) {
+            return Optional.empty();
+        }
+        return Optional.of(variant);
+    }
+
+    /** The shape enum a block instance carries, read through its own getter. */
+    private static Optional<String> variantFromBlock(Block block) {
+        Method getter = VARIANT_GETTER.computeIfAbsent(block.getClass(),
+                DomumOrnamentumResolver::findVariantGetter).orElse(null);
+        if (getter == null) {
+            return Optional.empty();
+        }
+        try {
+            if (!(getter.invoke(block) instanceof Enum<?> value)) {
+                return Optional.empty();
+            }
+            // The shape enums carry the wording DO's own tooltip uses; the rest name themselves.
+            Object langName = MineColoniesReflect.invoke(value, "getLangName").orElse(null);
+            return Optional.of(langName instanceof String s && !s.isBlank() ? s : Text.humanize(value.name()));
+        } catch (Throwable t) {
+            return Optional.empty();
+        }
+    }
+
+    /**
+     * The getter is matched on its return type rather than its name: every family names it
+     * differently ({@code getFramedLightType}, {@code getTimberFrameType}, {@code getType}), but
+     * they all hand back an enum declared by Domum Ornamentum.
+     */
+    private static Optional<Method> findVariantGetter(Class<?> blockClass) {
+        Method found = null;
+        for (Method method : blockClass.getMethods()) {
+            if (method.getParameterCount() != 0
+                    || Modifier.isStatic(method.getModifiers())
+                    || !method.getReturnType().isEnum()
+                    || !method.getReturnType().getName().startsWith(DO_PACKAGE)) {
+                continue;
+            }
+            // getMethods() has no defined order, so a block exposing more than one would otherwise
+            // report a different shape from run to run. Name order is arbitrary but stable.
+            if (found == null || method.getName().compareTo(found.getName()) < 0) {
+                found = method;
             }
         }
-        return base;
+        return Optional.ofNullable(found);
     }
 
     /**

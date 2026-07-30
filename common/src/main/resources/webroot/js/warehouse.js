@@ -15,7 +15,7 @@ export function warehouseState() {
             let list = (this.snap.warehouse.stacks || []).slice();
 
             const query = this.whSearch.trim();
-            if (query) list = list.filter((s) => matches(query, s.name, s.material));
+            if (query) list = list.filter((s) => matches(query, s.name, s.material, s.variant));
 
             list.sort(this.whSort === "alpha"
                 ? (a, b) => (a.name || "").localeCompare(b.name || "")

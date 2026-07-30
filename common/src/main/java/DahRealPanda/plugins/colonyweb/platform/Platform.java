@@ -67,6 +67,18 @@ public interface Platform {
     Optional<CompoundTag> blockEntityData(ItemStack stack);
 
     /**
+     * A block-state property a stack pins for the block it places, e.g. {@code "type"}.
+     *
+     * <p>Domum Ornamentum splits some families — posts, fancy doors and trapdoors — into one block
+     * with a {@code type} property rather than one block per shape, and the cut shape then travels
+     * on the stack. 1.20.1 keeps it in the stack's NBT; 1.20.5 and later in the {@code
+     * minecraft:block_state} component.</p>
+     *
+     * @return the raw property value (e.g. {@code "plain"}), or empty when the stack pins none.
+     */
+    Optional<String> blockStateProperty(ItemStack stack, String property);
+
+    /**
      * A stable string identifying everything about a stack beyond its item id, or null when the
      * stack carries nothing extra.
      *
