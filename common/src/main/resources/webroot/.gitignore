@@ -1,3 +1,9 @@
+# npm's install directory, its lockfile and Vite's dependency cache.
 node_modules/
-style.css
 package-lock.json
+.vite/
+
+# Vite build output. The buildFrontend Gradle task regenerates both into webroot before the jar is
+# packaged, so committing them would only ever produce stale artifacts and noisy diffs.
+js/app.js
+style.css

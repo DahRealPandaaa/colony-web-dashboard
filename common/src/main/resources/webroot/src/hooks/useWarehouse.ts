@@ -13,7 +13,11 @@ export function useWarehouse() {
   const { snap } = useColony()
   const { whSearch, setWhSearch, whSort, setWhSort } = useUi()
 
-  const warehouseStacks = useMemo(() => {
+  // The hidden count is derived from the same filtered list that produced the rows, not from the
+  // full stock: counting against the unfiltered list left "N more entries" on screen after a search
+  // had already narrowed the results below the limit, telling the user to narrow a list that was
+  // showing in full.
+  const { warehouseStacks, warehouseHidden } = useMemo(() => {
     let list = (snap.warehouse.stacks || []).slice()
 
     const query = whSearch.trim()
@@ -23,10 +27,11 @@ export function useWarehouse() {
       ? (a, b) => (a.name || '').localeCompare(b.name || '')
       : (a, b) => b.count - a.count)
 
-    return list.slice(0, LIMIT)
+    return {
+      warehouseStacks: list.slice(0, LIMIT),
+      warehouseHidden: Math.max(0, list.length - LIMIT),
+    }
   }, [snap.warehouse.stacks, whSearch, whSort])
-
-  const warehouseHidden = Math.max(0, (snap.warehouse.stacks || []).length - LIMIT)
 
   return { whSearch, setWhSearch, whSort, setWhSort, warehouseStacks, warehouseHidden }
 }

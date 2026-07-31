@@ -28,9 +28,12 @@ export function WarehouseTab() {
 
       {/* Item cards deliberately mirror the in-game tooltip, material lines and all. */}
       <div className="grid grid-auto-items gap-2.5">
-        {w.warehouseStacks.map((s, i) => (
+        {/* itemKey, not the array index: the list re-sorts and re-filters as you type, and an
+            index key would let React reuse a card's DOM for a different item. The server
+            aggregates stock into one entry per key, so it is unique within this list. */}
+        {w.warehouseStacks.map(s => (
           <ItemTooltip
-            key={i}
+            key={s.itemKey}
             item={s}
             lines={!s.domum && <div className="mc-line">{s.itemKey.split('#')[0]}</div>}
             right={<div className="mc-count">{stacks(s.count, s.maxStackSize)}</div>}

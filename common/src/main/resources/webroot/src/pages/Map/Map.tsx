@@ -67,12 +67,17 @@ export function MapTab() {
               />
             )}
 
+            {/* These markers carry no text, so `title` is their only label — and a title alone is
+                not reliably announced by screen readers. aria-label gives them a real accessible
+                name, and type="button" keeps them from defaulting to submit behaviour. */}
             {m.mapCitizens.map(c => (
               <button
                 key={`c${c.id}`}
+                type="button"
                 className={`map-dot ${m.citizenDotClass(c)}`}
                 style={m.citizenMarkerStyle(c)}
                 title={m.citizenTitle(c)}
+                aria-label={m.citizenTitle(c)}
                 onClick={e => { e.stopPropagation(); if (m.clickedWithoutDrag()) openCitizen(c) }}
               />
             ))}
@@ -80,14 +85,18 @@ export function MapTab() {
             {m.mapBuildings.map(b => (
               <button
                 key={`b${b.id}`}
+                type="button"
                 className={`map-pin${b.beingBuilt ? ' building' : ''}`}
                 style={m.buildingMarkerStyle(b)}
                 title={m.buildingTitle(b)}
+                aria-label={m.buildingTitle(b)}
                 onClick={e => { e.stopPropagation(); if (m.clickedWithoutDrag()) openBuilding(b) }}
               >
+                {/* Decorative: the button's aria-label already names it, so an alt here would
+                    only be redundant to a screen reader. */}
                 <img
                   src={buildingArt(b) || buildingIcon(b)}
-                  alt={b.name}
+                  alt=""
                   draggable={false}
                   onError={e => buildingIconFallback(e.currentTarget, b)}
                 />
