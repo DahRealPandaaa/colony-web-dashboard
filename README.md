@@ -8,17 +8,53 @@ Players sign in with a pairing code from `/colonyweb sync` and only see colonies
 
 ## Features
 
-| Tab | What it shows |
-|---|---|
-| **Overview** | Stat tiles (citizens, happiness, buildings, defence, warehouse, research, builders), work orders sorted by activity, builder roster |
-| **Map** | Pannable/zoomable top-down colony map with building pins and citizen dots, auto-fit and centre controls |
-| **Buildings** | Card grid with search, sort (status/name/progress/level), in-progress and decoration filters, per-building resource detail modal |
-| **Citizens** | Roster with job filter and search, skill breakdown, health and happiness meters, inventory and equipment modals |
-| **Research** | University branches with progress bars, state pills, item cost icons |
-| **Combat** | Guard post staffing (ok/deliver/missing), guard health, raid banner with nights since last raid |
-| **Warehouse** | Aggregated colony stock with search and sort (by count or alphabetically) |
+Seven tabs, every one of them live — colony data streams in over SSE, so nothing here needs a manual refresh.
 
-All tabs update in real time — no manual refresh needed.
+<!-- Screenshots live in docs/screenshots/. Every tab below already has its image line written
+     out and commented; add the matching PNG and uncomment the line to make it appear.
+     docs/screenshots/README.md has the capture and sizing notes. -->
+
+### Overview
+
+Stat tiles for citizens, happiness, buildings, defence, warehouse and research, the builder roster, and every work order sorted by activity so whatever is moving sits at the top.
+
+<!-- ![The Overview tab](docs/screenshots/overview.png) -->
+
+### Map
+
+A pannable, zoomable top-down render of the colony, one pixel per block, with building pins and live citizen dots. Auto-fit and centre-on-town-hall controls, and toggles for buildings, citizens and labels.
+
+<!-- ![The Map tab](docs/screenshots/map.png) -->
+
+### Buildings
+
+A card grid with search and sort (status, name, progress, level) plus in-progress and decoration filters. Click any card for a detail modal listing the resources that build still needs.
+
+<!-- ![The Buildings tab](docs/screenshots/buildings.png) -->
+
+### Citizens
+
+The full roster with a job filter and search. Each citizen opens into a skill breakdown, health and happiness meters, and their inventory and equipment.
+
+<!-- ![The Citizens tab](docs/screenshots/citizens.png) -->
+
+### Research
+
+University branches drawn as progress bars, with state pills and item-cost icons for whatever each unlock wants.
+
+<!-- ![The Research tab](docs/screenshots/research.png) -->
+
+### Combat
+
+Guard post staffing at a glance — ok, deliver or missing — with guard health and a raid banner counting the nights since the last attack.
+
+<!-- ![The Combat tab](docs/screenshots/combat.png) -->
+
+### Warehouse
+
+Aggregated colony stock across every rack, searchable and sortable by count or alphabetically.
+
+<!-- ![The Warehouse tab](docs/screenshots/warehouse.png) -->
 
 ---
 
@@ -54,7 +90,7 @@ File: `config/colonyweb-common.toml`
 | `publicHost` | *(blank)* | Host name used in the link `/colonyweb` prints. Blank means the server's detected address |
 | `refreshIntervalSeconds` | `3` | How often colony data is re-scanned and pushed over SSE |
 | `autoDownloadVanillaAssets` | `true` | Download the matching vanilla client jar on first start so vanilla item/block icons can be shown |
-| `mapEnabled` | `true` | Show the colony map tab |
+| `mapEnabled` | `true` | Show the colony map tab 
 | `mapRadius` | `256` | How far from the colony centre the map reaches, in blocks |
 | `authEnabled` | `true` | Require pairing-code authentication. Turning this off makes the dashboard public to anyone who can reach the port |
 | `sessionDays` | `30` | How long a browser stays signed in after entering a pairing code |
@@ -93,7 +129,6 @@ The code is single-use and expires after 10 minutes by default (`loginCodeMinute
 | Pairing code not accepted | Code expired (`loginCodeMinutes`, 10 min by default) or already used — run `/colonyweb sync` again |
 | Dashboard loads but all tabs are empty | MineColonies not installed or not loaded on the server |
 | Images / textures missing | First load downloads vanilla assets — may take a minute on slow connections |
-| SSE disconnects frequently | A reverse proxy in front of the dashboard is buffering or timing out the event stream — disable response buffering and raise the read timeout for the dashboard route |
 
 See the server log (`latest.log`) for lines prefixed with `[ColonyWeb]`.
 
