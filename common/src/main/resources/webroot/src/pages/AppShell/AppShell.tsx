@@ -6,6 +6,7 @@ import CitizenModal from '../../components/CitizenModal/CitizenModal'
 import { OverviewTab } from '../Overview/Overview'
 import { MapTab } from '../Map/Map'
 import { BuildingsTab } from '../Buildings/Buildings'
+import { NeededTab } from '../Needed/Needed'
 import { CitizensTab } from '../Citizens/Citizens'
 import { ResearchTab } from '../Research/Research'
 import { CombatTab } from '../Combat/Combat'
@@ -68,6 +69,7 @@ export function AppShell() {
               {tab === 'overview' && <OverviewTab />}
               {tab === 'map' && <MapTab />}
               {tab === 'buildings' && <BuildingsTab />}
+              {tab === 'needed' && <NeededTab />}
               {tab === 'citizens' && <CitizensTab />}
               {tab === 'research' && <ResearchTab />}
               {tab === 'combat' && <CombatTab />}

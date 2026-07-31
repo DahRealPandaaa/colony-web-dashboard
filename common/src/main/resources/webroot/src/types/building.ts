@@ -12,6 +12,14 @@ export interface ResourceEntry extends ItemInfo {
   deliverable: boolean
 }
 
+/** One required item summed across every building site waiting on it. */
+export interface NeededItem extends ResourceEntry {
+  /** How many sites want this item. */
+  sites: number
+  /** What nothing in the colony covers yet: needed - inHut - inWarehouse. */
+  shortfall: number
+}
+
 export interface BuildingInfo {
   id: number
   name: string

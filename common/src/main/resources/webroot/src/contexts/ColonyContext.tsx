@@ -6,6 +6,7 @@ import {
   Unauthorized, fetchCitizenDetail, fetchColonies, fetchColonySection, fetchColonySnapshot,
 } from '../api'
 import { useAuth } from './AuthContext'
+import { stillNeeded } from '../format/needed'
 import type { ColonySnapshot, ColonyStats, ColonySummary } from '../types/colony'
 import type { BuildingInfo } from '../types/building'
 import type { CitizenInfo, EquipmentInfo } from '../types/citizen'
@@ -17,7 +18,7 @@ import type { MapInfo } from '../types/map'
 /** How often to ask the server how far the map has got, while the tab is open. */
 const MAP_POLL_MS = 2500
 
-export const TAB_IDS = ['overview', 'map', 'buildings', 'citizens', 'research', 'combat', 'warehouse'] as const
+export const TAB_IDS = ['overview', 'map', 'buildings', 'needed', 'citizens', 'research', 'combat', 'warehouse'] as const
 export type TabId = typeof TAB_IDS[number]
 
 /** Which lazily-loaded sections each tab needs. */
@@ -251,6 +252,7 @@ export function ColonyProvider({ children }: { children: ReactNode }) {
   const tabCount = useCallback((id: TabId): number | null => {
     switch (id) {
       case 'buildings': return snap.buildings.length
+      case 'needed': return stillNeeded(snap).length
       case 'warehouse': return snap.warehouse.stacks.length
       case 'citizens': return loaded.citizens ? citizens.length : stats.citizens
       case 'research': return research ? research.completed : null

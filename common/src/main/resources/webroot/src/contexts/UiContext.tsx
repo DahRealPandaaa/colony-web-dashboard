@@ -14,6 +14,7 @@ import { useColony } from './ColonyContext'
 export type BuildingSort = 'status' | 'progress' | 'name' | 'level'
 export type CitizenSort = 'job' | 'name' | 'skills' | 'happiness' | 'health'
 export type WarehouseSort = 'count' | 'alpha'
+export type NeededSort = 'shortfall' | 'alpha'
 export type ResearchFilter = 'all' | 'IN_PROGRESS' | 'COMPLETED' | 'NOT_STARTED'
 
 export interface MapView {
@@ -53,6 +54,11 @@ interface UiState {
   whSort: WarehouseSort
   setWhSort: (v: WarehouseSort) => void
 
+  neededSearch: string
+  setNeededSearch: (v: string) => void
+  neededSort: NeededSort
+  setNeededSort: (v: NeededSort) => void
+
   mapView: MapView
   setMapView: (next: MapView | ((prev: MapView) => MapView)) => void
   showBuildings: boolean
@@ -86,6 +92,9 @@ export function UiProvider({ children }: { children: ReactNode }) {
   const [whSearch, setWhSearch] = useState('')
   const [whSort, setWhSort] = useState<WarehouseSort>('count')
 
+  const [neededSearch, setNeededSearch] = useState('')
+  const [neededSort, setNeededSort] = useState<NeededSort>('shortfall')
+
   const [mapView, setMapView] = useState<MapView>(DEFAULT_MAP_VIEW)
   const [showBuildings, setShowBuildings] = useState(true)
   const [showCitizens, setShowCitizens] = useState(true)
@@ -109,12 +118,14 @@ export function UiProvider({ children }: { children: ReactNode }) {
     citizenSearch, setCitizenSearch, citizenJob, setCitizenJob, citizenSort, setCitizenSort,
     researchBranch, setResearchBranch, researchFilter, setResearchFilter,
     whSearch, setWhSearch, whSort, setWhSort,
+    neededSearch, setNeededSearch, neededSort, setNeededSort,
     mapView, setMapView, showBuildings, setShowBuildings,
     showCitizens, setShowCitizens, showLabels, setShowLabels,
   }), [
     search, sort, onlyInProgress, showDecorations, buildingSearch,
     citizenSearch, citizenJob, citizenSort,
     researchBranch, researchFilter, whSearch, whSort,
+    neededSearch, neededSort,
     mapView, showBuildings, showCitizens, showLabels,
   ])
 
