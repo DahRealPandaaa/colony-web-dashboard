@@ -1,102 +1,140 @@
 import { useColony } from '../../contexts/ColonyContext'
 import { useOverview } from '../../hooks/useOverview'
-import { num, pct } from '../../format/format'
-import StatTile from '../../components/StatTile/StatTile'
+import { num, pct, statusOf } from '../../format/format'
+import type { BuildingInfo } from '../../types/building'
 import WorkOrderCard from '../../components/WorkOrderCard/WorkOrderCard'
 import BuilderCard from '../../components/BuilderCard/BuilderCard'
-import { Meter } from '../../components/Meter/Meter'
+import Panel from '../../components/Panel/Panel'
+import { Meter, Progress } from '../../components/Meter/Meter'
+import House from '../../components/icons/House'
 
-/** Happiness reads green above 7, amber above 5, red below. */
-function happinessClass(happiness: number): string {
-  if (happiness >= 7) return 'text-emerald-300'
-  return happiness >= 5 ? 'text-amber-300' : 'text-rose-300'
+function happinessClass(h: number): string {
+  if (h >= 7) return 'text-success'
+  return h >= 5 ? 'text-amber' : 'text-rose'
 }
 
 export function OverviewTab() {
-  const { snap, stats } = useColony()
+  const { snap, stats, research, colonies, colonyId, setTab, openBuilding } = useColony()
   const { builderInfo, activeWorkOrders } = useOverview()
+  const colony = colonies.find(c => c.id === colonyId)
+
+  // In-progress research items — data now loaded on overview tab
+  const activeResearch = research?.branches
+    ?.flatMap(b => b.researches)
+    .filter(e => e.state === 'IN_PROGRESS') ?? []
 
   return (
-    <div className="grid grid-cols-1 xl:grid-cols-[1fr_340px] gap-4 animate-fade-up">
-      <div className="min-w-0 flex flex-col gap-4">
-        {/* Headline numbers */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-          <StatTile
-            label="Citizens"
-            value={`${stats.citizens} / ${stats.maxCitizens || '—'}`}
-            sub={`${stats.children} children · ${stats.unemployed} idle`}
-          />
-          <StatTile
-            label="Happiness"
-            value={stats.happiness.toFixed(1)}
-            valueClass={happinessClass(stats.happiness)}
-          >
-            <Meter variant="happy" pct={pct(stats.happiness, 10)} className="mt-2" />
-          </StatTile>
-          <StatTile
-            label="Buildings"
-            value={stats.buildings}
-            sub={`${stats.decorations} decorations · ${stats.workOrders} work orders`}
-          />
-          <StatTile
-            label="Defence"
-            value={stats.guards}
-            valueClass={stats.raided ? 'text-rose-300' : ''}
-            sub={stats.raided ? 'Under attack!' : `${stats.nightsSinceRaid} nights since raid`}
-            subClass={stats.raided ? 'text-rose-300 font-semibold' : ''}
-          />
-          <StatTile
-            label="Warehouse"
-            value={num(stats.warehouseItems)}
-            sub={`${stats.warehouseTypes} distinct items`}
-          />
-          <StatTile
-            label="Research"
-            value={stats.researchCompleted}
-            sub={`${stats.researchInProgress} in progress`}
-          />
-          <StatTile
-            label="Builders"
-            value={stats.builders}
-            sub={`${snap.workOrders.length} orders queued`}
-          />
-          <StatTile label="Avg. saturation" value={stats.saturation.toFixed(1)}>
-            <Meter variant="food" pct={pct(stats.saturation, 20)} className="mt-2" />
-          </StatTile>
+    <div className="animate-fade-up flex flex-col gap-6">
+      {/* ── Hero banner ── */}
+      <div className="hero-banner flex items-center gap-4 flex-wrap">
+        <span className="brand-mark w-12 h-12 shrink-0">
+          <House size={22} />
+        </span>
+        <div className="flex-1 min-w-0">
+          <h1 className="text-xl font-bold font-display tracking-tight">
+            {colony?.name ?? 'Colony'}
+          </h1>
+          <p className="text-sm text-text-secondary mt-0.5">
+            {stats.citizens} citizens · {stats.buildings} buildings · {stats.guards} guards
+          </p>
         </div>
-
-        {/* Work orders */}
-        <section className="panel">
-          <div className="panel-head">
-            <div>
-              <h2 className="panel-title">Work orders</h2>
-              <p className="panel-sub">Claimed orders first</p>
+        <div className="flex items-center gap-4 flex-wrap">
+          <div className="text-right">
+            <div className="text-xs text-text-secondary uppercase tracking-wider font-semibold">Happiness</div>
+            <div className={`text-2xl font-bold font-display tabular-nums ${happinessClass(stats.happiness)}`}>
+              {stats.happiness.toFixed(1)}
             </div>
-            <span className="chip">{snap.workOrders.length} total</span>
           </div>
-          <div className="panel-body space-y-2">
-            {activeWorkOrders.map(wo => <WorkOrderCard key={wo.id} order={wo} />)}
-            {!snap.workOrders.length && <p className="empty">Nothing is being built right now.</p>}
+          <div className="text-right">
+            <div className="text-xs text-text-secondary uppercase tracking-wider font-semibold">Nights safe</div>
+            <div className={`text-2xl font-bold font-display tabular-nums ${stats.raided ? 'text-rose' : ''}`}>
+              {stats.raided ? 'RAID!' : stats.nightsSinceRaid}
+            </div>
           </div>
-        </section>
+        </div>
       </div>
 
-      {/* Builders */}
-      <aside className="panel self-start">
-        <div className="panel-head">
-          <div>
-            <h2 className="panel-title">Builders</h2>
-            <p className="panel-sub">Who is on what</p>
+      {/* ── Quick stats bar ── */}
+      <div className="flex items-center gap-4 flex-wrap text-sm bg-ink-900/60 border border-line rounded-xl px-5 py-3">
+        <span className="text-text-secondary">
+          <span className="text-text-primary font-semibold tabular-nums">{stats.citizens} / {stats.maxCitizens || '—'}</span> citizens
+        </span>
+        <span className="text-text-muted">·</span>
+        <span className="text-text-secondary">
+          <span className="text-text-primary font-semibold tabular-nums">{stats.buildings}</span> buildings
+          {' · '}
+          <span className="text-text-primary font-semibold tabular-nums">{stats.decorations}</span> decorations
+        </span>
+        <span className="text-text-muted">·</span>
+        <span className="text-text-secondary">
+          <span className="text-text-primary font-semibold tabular-nums">{num(stats.warehouseItems)}</span> in warehouse
+        </span>
+        <span className="text-text-muted">·</span>
+        <span className="text-text-secondary">
+          <span className="text-text-primary font-semibold tabular-nums">{stats.researchCompleted}</span> research done
+        </span>
+        <button
+          className="chip chip-btn ml-auto"
+          onClick={() => setTab('map')}
+        >
+          Open map →
+        </button>
+      </div>
+
+      {/* ── Work orders + side panels ── */}
+      <div className="grid grid-cols-1 xl:grid-cols-[1fr_600px] gap-4">
+        {/* Work orders */}
+        <Panel title="Work orders" subtitle="Claimed orders first" count={snap.workOrders.length}>
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+            {activeWorkOrders.map(wo => {
+              const bld = snap.buildings.find(b => b.workOrderId === wo.id)
+              const counts = bld ? {
+                ok: (bld.required || []).filter(r => statusOf(r) === 'ok').length,
+                deliver: (bld.required || []).filter(r => statusOf(r) === 'deliver').length,
+                missing: (bld.required || []).filter(r => statusOf(r) === 'missing').length,
+              } : undefined
+              return <WorkOrderCard key={wo.id} order={wo} onOpen={bld ? () => openBuilding(bld) : undefined} counts={counts} />
+            })}
+            {!snap.workOrders.length && <p className="empty col-span-full">Nothing is being built right now.</p>}
           </div>
-          <span className="chip">{snap.builders.length}</span>
+        </Panel>
+
+        {/* Side: Research + Builders */}
+        <div className="flex flex-col gap-4">
+          {activeResearch.length > 0 ? (
+            <Panel title="Researching now" subtitle={`${stats.researchInProgress} underway`}>
+              <div className="space-y-2">
+                {activeResearch.map(e => (
+                  <div key={e.id} className="card p-3!">
+                    <div className="font-semibold text-sm">{e.name}</div>
+                    <div className="text-xs text-text-secondary mt-0.5">{e.branch} · tier {e.depth}</div>
+                    <Progress pct={pct(e.progress, e.maxProgress)} />
+                    <div className="text-xs text-violet-300 font-bold tabular-nums mt-1">
+                      {pct(e.progress, e.maxProgress)}%
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </Panel>
+          ) : (
+            <Panel title="Research" subtitle={`${stats.researchCompleted} completed`}>
+              <button
+                className="w-full text-sm text-accent-soft hover:text-accent transition-colors text-center py-2"
+                onClick={() => setTab('research')}
+              >
+                Open research tab →
+              </button>
+            </Panel>
+          )}
+
+          <Panel title="Builders" subtitle="Who is on what" count={snap.builders.length}>
+            <div className="space-y-2">
+              {snap.builders.map(b => <BuilderCard key={b.id} builder={b} task={builderInfo(b)} />)}
+              {!snap.builders.length && <p className="empty text-sm">No builders assigned.</p>}
+            </div>
+          </Panel>
         </div>
-        <div className="panel-body space-y-2.5">
-          {snap.builders.map(b => (
-            <BuilderCard key={b.id} builder={b} task={builderInfo(b)} />
-          ))}
-          {!snap.builders.length && <p className="empty">No builders assigned.</p>}
-        </div>
-      </aside>
+      </div>
     </div>
   )
 }

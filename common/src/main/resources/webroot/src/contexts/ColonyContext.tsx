@@ -22,6 +22,8 @@ export type TabId = typeof TAB_IDS[number]
 
 /** Which lazily-loaded sections each tab needs. */
 const TAB_SECTIONS: Record<string, string[]> = {
+  // The overview now loads research so it can show in-progress items.
+  overview: ['research'],
   // The map plots the citizen roster, so it needs that section as well as its own.
   map: ['map', 'citizens'],
   citizens: ['citizens'],

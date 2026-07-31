@@ -24,10 +24,10 @@ export function stacks(value: number, maxStackSize?: number): string {
 
 export function badgeClass(action?: string): string {
   switch ((action || '').toUpperCase()) {
-    case 'UPGRADE': return 'b-upgrade'
-    case 'BUILD': return 'b-build'
-    case 'REPAIR': return 'b-repair'
-    case 'REMOVE': return 'b-remove'
+    case 'UPGRADE': return 'ba-upgrade'
+    case 'BUILD': return 'ba-build'
+    case 'REPAIR': return 'ba-repair'
+    case 'REMOVE': return 'ba-remove'
     default: return ''
   }
 }

@@ -19,7 +19,7 @@ export default function GuardPostCard({ post: p, status }: Props) {
       />
       <div className="flex-1 min-w-0">
         <div className="font-semibold text-sm truncate">{p.name}</div>
-        <div className="text-xs text-slate-400">
+        <div className="text-xs text-text-secondary">
           Level {p.level} · {p.assigned}/{p.capacity} staffed
         </div>
       </div>

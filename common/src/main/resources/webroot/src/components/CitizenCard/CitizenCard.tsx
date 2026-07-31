@@ -1,7 +1,16 @@
-import { pct } from '../../format/format'
 import { citizenArt, citizenIconFallback } from '../../hooks/useIcons'
-import { Meter } from '../Meter/Meter'
 import type { CitizenInfo, Skill } from '../../types/citizen'
+
+function moodColor(value: number, max: number, kind: 'hp' | 'food' | 'happy'): string {
+  const ratio = value / max
+  if (kind === 'hp' || kind === 'food') {
+    if (ratio >= 0.7) return 'bg-emerald-400'
+    return ratio >= 0.35 ? 'bg-amber-400' : 'bg-rose-500'
+  }
+  // happiness: 0-10 scale
+  if (value >= 7) return 'bg-emerald-400'
+  return value >= 5 ? 'bg-amber-400' : 'bg-rose-500'
+}
 
 interface Props {
   citizen: CitizenInfo
@@ -11,12 +20,11 @@ interface Props {
 
 export default function CitizenCard({ citizen: c, skills, onOpen }: Props) {
   return (
-    <article className="card card-click" tabIndex={0}
+    <article className="card card-click flex flex-col gap-3" tabIndex={0}
       onClick={onOpen}
       onKeyDown={e => { if (e.key === 'Enter') onOpen() }}
     >
       <div className="flex items-start gap-3">
-        {/* object-top crops the full-body render to a head-and-shoulders bust. */}
         <img
           className="w-12 h-14 object-cover object-top rounded-lg bg-black/30 border border-line shrink-0"
           loading="lazy" src={citizenArt(c)} alt={c.job}
@@ -32,41 +40,37 @@ export default function CitizenCard({ citizen: c, skills, onOpen }: Props) {
             />
           </div>
           <div className="text-xs text-accent-soft font-semibold truncate">{c.job}</div>
-          <div className="text-xs text-slate-400 truncate">{c.workBuilding || 'No workplace'}</div>
+          <div className="text-xs text-text-secondary truncate">{c.workBuilding || 'No workplace'}</div>
         </div>
       </div>
 
-      <div className="mt-3 space-y-2">
-        <div>
-          <div className="flex justify-between text-xs text-slate-400 mb-1">
-            <span>Health</span>
-            <span className="tabular-nums">{c.health.toFixed(0)} / {c.maxHealth.toFixed(0)}</span>
-          </div>
-          <Meter variant="hp" pct={pct(c.health, c.maxHealth)} />
-        </div>
-        <div>
-          <div className="flex justify-between text-xs text-slate-400 mb-1">
-            <span>Saturation</span>
-            <span className="tabular-nums">{c.saturation.toFixed(1)}</span>
-          </div>
-          <Meter variant="food" pct={pct(c.saturation, 20)} />
-        </div>
-        <div>
-          <div className="flex justify-between text-xs text-slate-400 mb-1">
-            <span>Happiness</span>
-            <span className="tabular-nums">{c.happiness.toFixed(1)}</span>
-          </div>
-          <Meter variant="happy" pct={pct(c.happiness, 10)} />
-        </div>
+      {/* Compact health / saturation / happiness indicators with labels */}
+      <div className="flex items-center gap-3 text-xs">
+        <span className="flex items-center gap-1.5" title={`HP: ${c.health.toFixed(0)} / ${c.maxHealth.toFixed(0)}`}>
+          <span className={`w-2 h-2 rounded-full ${moodColor(c.health, c.maxHealth, 'hp')}`} />
+          <span className="text-text-secondary">HP</span>
+          <span className="text-text-primary tabular-nums font-semibold">{c.health.toFixed(0)}</span>
+        </span>
+        <span className="flex items-center gap-1.5" title={`Saturation: ${c.saturation.toFixed(1)} / 20`}>
+          <span className={`w-2 h-2 rounded-full ${moodColor(c.saturation, 20, 'food')}`} />
+          <span className="text-text-secondary">Food</span>
+          <span className="text-text-primary tabular-nums font-semibold">{c.saturation.toFixed(1)}</span>
+        </span>
+        <span className="flex items-center gap-1.5" title={`Happiness: ${c.happiness.toFixed(1)} / 10`}>
+          <span className={`w-2 h-2 rounded-full ${moodColor(c.happiness, 10, 'happy')}`} />
+          <span className="text-text-secondary">Mood</span>
+          <span className="text-text-primary tabular-nums font-semibold">{c.happiness.toFixed(1)}</span>
+        </span>
       </div>
 
-      <div className="flex items-center gap-1.5 mt-3 flex-wrap">
+      {/* Skill chips */}
+      <div className="flex items-center gap-1.5 flex-wrap">
         {skills.map(s => (
-          <span key={s.name} className={`chip py-0.5! ${s.role ? 'on' : ''}`}>
+          <span key={s.name} className={`chip py-0.5! text-xs on `}>
             <span>{s.name}</span><b className="tabular-nums">{s.level}</b>
           </span>
         ))}
-        <span className="ml-auto text-xs text-slate-400 tabular-nums">
+        <span className="ml-auto text-xs text-text-secondary tabular-nums">
           {c.inventoryUsed}/{c.inventorySize}
         </span>
       </div>
