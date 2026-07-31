@@ -57,7 +57,7 @@ export function useBuildings() {
     const query = search.trim()
     if (query) {
       list = list.filter(b => matches(query, b.name)
-        || (b.required || []).some(r => matches(query, r.name, r.material)))
+        || (b.required || []).some(r => matches(query, r.name, r.material, r.variant)))
     }
 
     const progressOf = (b: BuildingInfo) => {
@@ -84,7 +84,7 @@ export function useBuildings() {
     if (!building) return []
     let list = (building.required || []).slice()
     const query = buildingSearch.trim()
-    if (query) list = list.filter(r => matches(query, r.name, r.material))
+    if (query) list = list.filter(r => matches(query, r.name, r.material, r.variant))
 
     const rank = { missing: 0, deliver: 1, ok: 2 }
     return list.sort((a, b) =>

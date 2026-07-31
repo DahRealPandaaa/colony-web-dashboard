@@ -54,6 +54,14 @@ class ForgePlatform : Platform {
         return if (stack.hasTag()) stack.tag.toString() else null
     }
 
+    override fun blockStateProperty(stack: ItemStack, property: String): String? {
+        val tag = stack.tag ?: return null
+        val fromBlockState = tag.getCompound("BlockStateTag").getString(property)
+        if (fromBlockState.isNotEmpty()) return fromBlockState
+        // Domum Ornamentum writes the shape at the top level on some of its own item stacks.
+        return tag.getString(property).ifEmpty { null }
+    }
+
     override fun armorPoints(stack: ItemStack): Int {
         return if (stack.item is ArmorItem) (stack.item as ArmorItem).defense else 0
     }

@@ -61,7 +61,7 @@ export function fetchCitizenDetail(colonyId: number, citizenId: number): Promise
   return getJson<CitizenDetail>(`/api/colony/${colonyId}/citizen/${citizenId}`)
 }
 
-const RENDER_VERSION = '3'
+const RENDER_VERSION = '4'
 
 export function textureUrl(key: string): string {
   return `/textures/${encodeURIComponent(key)}.png?v=${RENDER_VERSION}`

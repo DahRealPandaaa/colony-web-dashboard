@@ -21,6 +21,9 @@ interface Platform {
 
     fun dataFingerprint(stack: ItemStack): String?
 
+    /** A block state property carried by the stack itself, e.g. the DO cut shape under "type". */
+    fun blockStateProperty(stack: ItemStack, property: String): String?
+
     fun armorPoints(stack: ItemStack): Int
 
     fun minecraftVersion(): String

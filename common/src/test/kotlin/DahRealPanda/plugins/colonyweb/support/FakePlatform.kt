@@ -39,6 +39,9 @@ class FakePlatform(
 
     override fun dataFingerprint(stack: ItemStack): String? = unsupported("dataFingerprint")
 
+    override fun blockStateProperty(stack: ItemStack, property: String): String? =
+        unsupported("blockStateProperty")
+
     override fun armorPoints(stack: ItemStack): Int = unsupported("armorPoints")
 
     override fun minecraftVersion(): String = version

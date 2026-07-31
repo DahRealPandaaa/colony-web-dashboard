@@ -2,6 +2,7 @@ package DahRealPanda.plugins.colonyweb.service
 import java.util.Optional
 
 import DahRealPanda.plugins.colonyweb.util.MineColoniesReflect
+import DahRealPanda.plugins.colonyweb.util.Text
 import DahRealPanda.plugins.colonyweb.model.MaterialComponent
 import DahRealPanda.plugins.colonyweb.platform.Platform
 import net.minecraft.core.registries.BuiltInRegistries
@@ -11,13 +12,20 @@ import net.minecraft.resources.ResourceLocation
 import net.minecraft.world.item.BlockItem
 import net.minecraft.world.item.ItemStack
 import net.minecraft.world.level.block.Block
+import java.lang.reflect.Method
+import java.lang.reflect.Modifier
 import java.nio.charset.StandardCharsets
 import java.security.MessageDigest
+import java.util.Locale
 import java.util.TreeMap
 import java.util.concurrent.ConcurrentHashMap
 
 object DomumOrnamentumResolver {
     const val DO_NAMESPACE = "domum_ornamentum"
+
+    private const val DO_PACKAGE = "com.ldtteam.domumornamentum"
+
+    private val VARIANT_GETTER = ConcurrentHashMap<Class<*>, Optional<Method>>()
 
     private val VARIANT_MATERIAL = ConcurrentHashMap<String, String>()
 
@@ -44,20 +52,72 @@ object DomumOrnamentumResolver {
     fun textureKeyFor(stack: ItemStack): String {
         val rl = BuiltInRegistries.ITEM.getKey(stack.item)
         val base = if (rl != null) rl.toString() else "minecraft:air"
-        val fingerprint = if (isDomum(stack)) Platform.get().dataFingerprint(stack) else null
-        if (fingerprint != null) {
-            val hash = hash8(fingerprint)
-            if (hash != null) {
-                val key = "$base#$hash"
-                val components = componentMaterials(stack)
-                if (components.isNotEmpty()) {
-                    VARIANT_COMPONENTS.putIfAbsent(key, components)
-                    primaryMaterial(components)?.let { VARIANT_MATERIAL.putIfAbsent(key, it) }
-                }
-                return key
+        if (!isDomum(stack)) return base
+        val components = componentMaterials(stack)
+        val fingerprint = (if (components.isEmpty()) Platform.get().dataFingerprint(stack)
+                           else canonicalFingerprint(components)) ?: return base
+        val hash = hash8(fingerprint) ?: return base
+        val key = "$base#$hash"
+        if (components.isNotEmpty()) {
+            VARIANT_COMPONENTS.putIfAbsent(key, components)
+            primaryMaterial(components)?.let { VARIANT_MATERIAL.putIfAbsent(key, it) }
+        }
+        return key
+    }
+
+    /**
+     * The materials of a DO stack and nothing else, so an unrelated tag or the empty textureData
+     * compound MineColonies writes onto a cutter recipe's output cannot split one block into two
+     * keys. Sorting keeps the key identical on both loaders.
+     */
+    internal fun canonicalFingerprint(components: Map<String, String>): String =
+        TreeMap(components).entries.joinToString(";") { "${it.key}=${it.value}" }
+
+    @JvmStatic
+    fun variantName(stack: ItemStack, displayName: String?): String? {
+        val item = stack.item
+        if (!isDomum(stack) || item !is BlockItem) return null
+        val variant = variantFromBlock(item.block)
+            ?: Platform.get().blockStateProperty(stack, "type")
+                ?.let { Text.humanize(it.lowercase(Locale.ROOT)) }
+        if (variant.isNullOrBlank()) return null
+        if (displayName != null && displayName.lowercase(Locale.ROOT).contains(variant.lowercase(Locale.ROOT))) {
+            return null
+        }
+        return variant
+    }
+
+    private fun variantFromBlock(block: Block): String? {
+        val getter = VARIANT_GETTER
+            .computeIfAbsent(block.javaClass) { findVariantGetter(it) }
+            .orElse(null) ?: return null
+        return try {
+            val value = getter.invoke(block) as? Enum<*> ?: return null
+            val langName = MineColoniesReflect.invoke(value, "getLangName").orElse(null)
+            if (langName is String && langName.isNotBlank()) langName else Text.humanize(value.name)
+        } catch (t: Throwable) {
+            null
+        }
+    }
+
+    /**
+     * Matched on return type, not name: every family names the getter differently but they all
+     * hand back a DO enum. Name order breaks ties so a block exposing two stays stable.
+     */
+    private fun findVariantGetter(blockClass: Class<*>): Optional<Method> {
+        var found: Method? = null
+        for (method in blockClass.methods) {
+            if (method.parameterCount != 0
+                || Modifier.isStatic(method.modifiers)
+                || !method.returnType.isEnum
+                || !method.returnType.name.startsWith(DO_PACKAGE)) {
+                continue
+            }
+            if (found == null || method.name < found.name) {
+                found = method
             }
         }
-        return base
+        return Optional.ofNullable(found)
     }
 
     @JvmStatic
