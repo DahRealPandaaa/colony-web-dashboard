@@ -4,7 +4,6 @@ import { useCitizens } from '../../hooks/useCitizens'
 import ModalShell from '../Modal/ModalShell'
 import ItemTooltip from '../ItemTooltip/ItemTooltip'
 import EquipmentStrip from '../EquipmentStrip/EquipmentStrip'
-import StatTile from '../StatTile/StatTile'
 import { Meter } from '../Meter/Meter'
 import Close from '../icons/Close'
 import Shield from '../icons/Shield'
@@ -34,7 +33,7 @@ export default function CitizenModal() {
               <span className="chip on">{citizen.job}</span>
               {citizen.child && <span className="ba b-repair">Child</span>}
             </h3>
-            <div className="flex gap-3 text-slate-400 text-sm mt-1 flex-wrap">
+            <div className="flex gap-3 text-text-secondary text-sm mt-1 flex-wrap">
               {citizen.workBuilding && <span>Works at {citizen.workBuilding}</span>}
               {citizen.homeBuilding && <span>Lives at {citizen.homeBuilding}</span>}
               <span className="tabular-nums">{citizen.x}, {citizen.y}, {citizen.z}</span>
@@ -47,21 +46,27 @@ export default function CitizenModal() {
       </div>
 
       <div className="modal-body">
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-          <StatTile label="Health" value={citizen.health.toFixed(0)}>
-            <Meter variant="hp" pct={pct(citizen.health, citizen.maxHealth)} className="mt-2" />
-          </StatTile>
-          <StatTile label="Saturation" value={citizen.saturation.toFixed(1)}>
-            <Meter variant="food" pct={pct(citizen.saturation, 20)} className="mt-2" />
-          </StatTile>
-          <StatTile label="Happiness" value={citizen.happiness.toFixed(1)}>
-            <Meter variant="happy" pct={pct(citizen.happiness, 10)} className="mt-2" />
-          </StatTile>
-          <StatTile
-            label="Total skill"
-            value={citizen.skillTotal}
-            sub={citizen.status || (citizen.spawned ? 'In the world' : 'Not loaded')}
-          />
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-2.5">
+          <div className="tile p-2.5!">
+            <div className="tile-label">Health</div>
+            <div className="text-lg font-bold font-display tabular-nums mt-1">{citizen.health.toFixed(0)}</div>
+            <Meter variant="hp" pct={pct(citizen.health, citizen.maxHealth)} className="mt-1.5" />
+          </div>
+          <div className="tile p-2.5!">
+            <div className="tile-label">Saturation</div>
+            <div className="text-lg font-bold font-display tabular-nums mt-1">{citizen.saturation.toFixed(1)}</div>
+            <Meter variant="food" pct={pct(citizen.saturation, 20)} className="mt-1.5" />
+          </div>
+          <div className="tile p-2.5!">
+            <div className="tile-label">Happiness</div>
+            <div className="text-lg font-bold font-display tabular-nums mt-1">{citizen.happiness.toFixed(1)}</div>
+            <Meter variant="happy" pct={pct(citizen.happiness, 10)} className="mt-1.5" />
+          </div>
+          <div className="tile p-2.5!">
+            <div className="tile-label">Total skill</div>
+            <div className="text-lg font-bold font-display tabular-nums mt-1">{citizen.skillTotal}</div>
+            <div className="tile-sub mt-1!">{citizen.status || (citizen.spawned ? 'In the world' : 'Not loaded')}</div>
+          </div>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 mt-5">
@@ -122,6 +127,7 @@ export default function CitizenModal() {
                 <ItemTooltip
                   key={i}
                   item={item}
+                  defaultExpanded
                   lines={<div className="mc-slot">slot {item.slot}</div>}
                   right={<div className="mc-count">x{item.count}</div>}
                 />

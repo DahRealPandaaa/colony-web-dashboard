@@ -1,3 +1,4 @@
+import { ThemeProvider } from './contexts/ThemeContext'
 import { AuthProvider, useAuth } from './contexts/AuthContext'
 import { ColonyProvider } from './contexts/ColonyContext'
 import { UiProvider } from './contexts/UiContext'
@@ -15,7 +16,7 @@ function Dashboard() {
           <span className="brand-mark w-11 h-11 animate-pulse-soft">
             <House size={24} />
           </span>
-          <span className="text-sm text-slate-400">Connecting to the colony…</span>
+          <span className="text-sm text-text-secondary">Connecting to the colony…</span>
         </div>
       </div>
     )
@@ -34,8 +35,10 @@ function Dashboard() {
 
 export default function App() {
   return (
-    <AuthProvider>
-      <Dashboard />
-    </AuthProvider>
+    <ThemeProvider>
+      <AuthProvider>
+        <Dashboard />
+      </AuthProvider>
+    </ThemeProvider>
   )
 }

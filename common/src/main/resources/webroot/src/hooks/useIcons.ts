@@ -79,6 +79,7 @@ export function buildingArt(building: Placeable): string {
   }
   if (building.kind === 'decoration') return DECORATION_BLOCK
   const type = pathOf(building.type)
+  if (type === 'decoration') return DECORATION_BLOCK
   return type ? `/img/blocks/blockhut${HUT_ALIASES[type] || type}.png` : DECORATION_BLOCK
 }
 

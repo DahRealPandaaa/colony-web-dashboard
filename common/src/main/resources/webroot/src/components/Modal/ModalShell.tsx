@@ -5,7 +5,7 @@ interface Props {
   children: ReactNode
 }
 
-/** Backdrop plus card, closing on Escape or a click outside the card. */
+/** Backdrop plus card. Desktop: centered pop-in. Mobile: bottom sheet. */
 export default function ModalShell({ onClose, children }: Props) {
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose() }
@@ -15,7 +15,7 @@ export default function ModalShell({ onClose, children }: Props) {
 
   return (
     <div className="modal-backdrop" onClick={e => { if (e.target === e.currentTarget) onClose() }}>
-      <div className="modal-card">{children}</div>
+      <div className="modal-card" role="dialog" aria-modal="true">{children}</div>
     </div>
   )
 }

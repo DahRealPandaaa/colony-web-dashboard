@@ -13,31 +13,7 @@ export function MapTab() {
   const stage = () => stageRef.current
 
   return (
-    <div className="animate-fade-up">
-      <div className="toolbar">
-        <ToggleSwitch label="Buildings" checked={m.showBuildings} onChange={m.setShowBuildings} />
-        <ToggleSwitch label="Citizens" checked={m.showCitizens} onChange={m.setShowCitizens} />
-        <ToggleSwitch label="Labels" checked={m.showLabels} onChange={m.setShowLabels} />
-
-        <button type="button" className="chip chip-btn" onClick={() => m.fitMap(stage())}>Fit</button>
-        <button type="button" className="chip chip-btn" onClick={() => m.centreMap(stage())}>Town hall</button>
-
-        {m.map?.available && (
-          <span
-            className={`chip${m.mappedPct >= 100 ? ' good' : ''}`}
-            title={`${m.map.chunksMapped} of ${m.map.chunksTotal} chunks drawn`}
-          >
-            {m.mappedPct >= 100 ? 'Fully mapped' : `Mapping ${m.mappedPct}%`}
-          </span>
-        )}
-
-        <span className="chip ml-auto tabular-nums">
-          {m.hoverX === null
-            ? `Zoom ${Math.round(m.zoom * 100)}%`
-            : `X ${m.hoverX} · Z ${m.hoverZ}`}
-        </span>
-      </div>
-
+    <div className="animate-fade-up flex flex-col gap-0">
       <div
         className={`map-frame${m.dragging ? ' grabbing' : ''}`}
         ref={stageRef}
@@ -58,7 +34,6 @@ export function MapTab() {
               onLoad={() => m.maybeFitMap(stage())}
             />
 
-            {/* The town hall, i.e. what MineColonies calls the colony centre. */}
             {m.map && (
               <span
                 className="map-centre"
@@ -67,9 +42,6 @@ export function MapTab() {
               />
             )}
 
-            {/* These markers carry no text, so `title` is their only label — and a title alone is
-                not reliably announced by screen readers. aria-label gives them a real accessible
-                name, and type="button" keeps them from defaulting to submit behaviour. */}
             {m.mapCitizens.map(c => (
               <button
                 key={`c${c.id}`}
@@ -92,8 +64,6 @@ export function MapTab() {
                 aria-label={m.buildingTitle(b)}
                 onClick={e => { e.stopPropagation(); if (m.clickedWithoutDrag()) openBuilding(b) }}
               >
-                {/* Decorative: the button's aria-label already names it, so an alt here would
-                    only be redundant to a screen reader. */}
                 <img
                   src={buildingArt(b) || buildingIcon(b)}
                   alt=""
@@ -106,7 +76,35 @@ export function MapTab() {
           </div>
         )}
 
-        {/* Everything below sits above the world layer and does not move with it. */}
+        {/* Floating overlay — map controls */}
+        <div className="map-overlay">
+          <div className="flex items-center gap-3 flex-wrap">
+            <ToggleSwitch label="Buildings" checked={m.showBuildings} onChange={m.setShowBuildings} />
+            <ToggleSwitch label="Citizens" checked={m.showCitizens} onChange={m.setShowCitizens} />
+            <ToggleSwitch label="Labels" checked={m.showLabels} onChange={m.setShowLabels} />
+            <span className="w-px h-5 bg-line hidden sm:block" />
+            <button type="button" className="chip chip-btn" onClick={() => m.fitMap(stage())}>Fit</button>
+            <button type="button" className="chip chip-btn" onClick={() => m.centreMap(stage())}>Town hall</button>
+          </div>
+
+          <div className="flex items-center gap-2">
+            {m.map?.available && (
+              <span
+                className={`chip text-xs${m.mappedPct >= 100 ? ' good' : ''}`}
+                title={`${m.map.chunksMapped} of ${m.map.chunksTotal} chunks drawn`}
+              >
+                {m.mappedPct >= 100 ? 'Fully mapped' : `Mapping ${m.mappedPct}%`}
+              </span>
+            )}
+            <span className="chip text-xs tabular-nums">
+              {m.hoverX === null
+                ? `Zoom ${Math.round(m.zoom * 100)}%`
+                : `X ${m.hoverX} · Z ${m.hoverZ}`}
+            </span>
+          </div>
+        </div>
+
+        {/* Loading / unavailable */}
         {m.map?.available && !m.mapReady && (
           <div className="map-note">
             <p className="empty-title">Drawing the colony map…</p>
@@ -125,11 +123,6 @@ export function MapTab() {
 
         {m.mapReady && <MapLegend />}
       </div>
-
-      <p className="mt-3 text-xs text-slate-400">
-        Drag to pan, scroll to zoom. The map is drawn from chunks the server has loaded, so
-        areas nobody has visited stay blank until they are.
-      </p>
     </div>
   )
 }
