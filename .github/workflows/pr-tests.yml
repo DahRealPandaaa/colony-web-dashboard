@@ -1,0 +1,90 @@
+name: PR Tests
+
+# Runs the unit test suite on every supported Minecraft version before a pull request can be
+# merged into main. This is deliberately separate from the PR build: the build produces jars and
+# takes as long as a full Minecraft decompile, while this reports pass/fail on the code itself,
+# and a reviewer should be able to see which of the two went red at a glance.
+on:
+  pull_request:
+    branches: [main]
+
+permissions:
+  # actions: read is what lets the toolchain cache be restored. A pull request
+  # never writes one back, so read is all it needs.
+  actions: read
+  contents: read
+
+# Superseded runs are useless, so drop them when new commits arrive.
+concurrency:
+  group: pr-tests-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  # The tests live in common/ and are compiled into every version project, so the matrix is the
+  # same one the build uses and comes from the same place: the versions/ directory itself.
+  targets:
+    name: Resolve test targets
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.targets.outputs.matrix }}
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+
+      - name: Discover build targets
+        id: targets
+        uses: ./.github/actions/build-targets
+
+  test:
+    name: Test ${{ matrix.version }}
+    needs: targets
+    runs-on: ubuntu-latest
+    # A cold decompile of Minecraft takes ~20 minutes; anything past an hour is hung rather
+    # than slow.
+    timeout-minutes: 60
+    strategy:
+      # The whole point of running on every version is seeing which ones fail, so one failing
+      # target must not cancel the others.
+      fail-fast: false
+      matrix:
+        include: ${{ fromJSON(needs.targets.outputs.matrix) }}
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+
+      # cache-read-only: pull requests read the caches main populates but never
+      # write per-branch copies of a multi-gigabyte toolchain cache back.
+      - name: Set up build environment
+        uses: ./.github/actions/gradle-build-env
+        with:
+          version: ${{ matrix.version }}
+          java-version: ${{ matrix.java }}
+          toolchain-cache-path: ${{ matrix.cache }}
+          cache-read-only: 'true'
+
+      # -PmcVersions keeps Gradle from even configuring the other targets, whose toolchain
+      # plugins want a different JDK from the one this job installed.
+      #
+      # The frontend tasks are excluded because `test` only needs them transitively, through
+      # processResources: no test reads webroot, and a Vite build that always reruns would add
+      # minutes to every job for output nothing here looks at.
+      - name: Run tests
+        run: >-
+          ./gradlew :versions:${{ matrix.version }}:test
+          -PmcVersions=${{ matrix.version }}
+          -x buildFrontend -x npmInstallFrontend
+          --no-daemon --stacktrace
+
+      # Uploaded on failure too — in fact especially then, since the HTML report is where the
+      # failing assertion and its stack trace actually are.
+      - name: Upload test report
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: test-report-${{ matrix.version }}
+          path: |
+            versions/${{ matrix.version }}/build/reports/tests/test
+            versions/${{ matrix.version }}/build/test-results/test
+          if-no-files-found: error
+          retention-days: 14
