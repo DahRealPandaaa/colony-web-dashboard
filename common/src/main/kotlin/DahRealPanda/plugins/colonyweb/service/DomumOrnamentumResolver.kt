@@ -23,10 +23,8 @@ import java.util.concurrent.ConcurrentHashMap
 object DomumOrnamentumResolver {
     const val DO_NAMESPACE = "domum_ornamentum"
 
-    /** Java package every Domum Ornamentum class lives under, including its shape enums. */
     private const val DO_PACKAGE = "com.ldtteam.domumornamentum"
 
-    /** Block class to the getter handing back its shape enum, resolved once per class. */
     private val VARIANT_GETTER = ConcurrentHashMap<Class<*>, Optional<Method>>()
 
     private val VARIANT_MATERIAL = ConcurrentHashMap<String, String>()
@@ -68,30 +66,18 @@ object DomumOrnamentumResolver {
     }
 
     /**
-     * The materials of a DO stack, and nothing else, as a stable string.
-     *
-     * Hashing the raw stack data instead makes the key depend on everything the stack happens to
-     * carry, so two stacks describing the same block with the same materials hash differently over
-     * an unrelated tag or an empty textureData compound (which is what MineColonies writes onto a
-     * cutter recipe's output) — the same block then caches twice and a taught recipe never matches
-     * the resource a builder asked for. Sorting also makes the key identical across loaders, where
-     * the same data arrives as NBT on 1.20.1 and as a data component on 1.21.
+     * The materials of a DO stack and nothing else, so an unrelated tag or the empty textureData
+     * compound MineColonies writes onto a cutter recipe's output cannot split one block into two
+     * keys. Sorting keeps the key identical on both loaders.
      */
     internal fun canonicalFingerprint(components: Map<String, String>): String =
         TreeMap(components).entries.joinToString(";") { "${it.key}=${it.value}" }
 
-    /**
-     * The cut shape of a DO block, e.g. "Fancy" for a fancy framed light, or null when the block
-     * has none or [displayName] already spells it out. A whole family shares one item name — every
-     * framed light is "Framed <centre material>" — and only the shape tells them apart.
-     */
     @JvmStatic
     fun variantName(stack: ItemStack, displayName: String?): String? {
         val item = stack.item
         if (!isDomum(stack) || item !is BlockItem) return null
         val variant = variantFromBlock(item.block)
-            // 1.20.1 stores the property value as the enum constant ("PLAIN"), 1.21 as its
-            // serialized name ("plain"); lower-casing first makes both humanize the same.
             ?: Platform.get().blockStateProperty(stack, "type")
                 ?.let { Text.humanize(it.lowercase(Locale.ROOT)) }
         if (variant.isNullOrBlank()) return null
@@ -101,14 +87,12 @@ object DomumOrnamentumResolver {
         return variant
     }
 
-    /** The shape enum a block instance carries, read through its own getter. */
     private fun variantFromBlock(block: Block): String? {
         val getter = VARIANT_GETTER
             .computeIfAbsent(block.javaClass) { findVariantGetter(it) }
             .orElse(null) ?: return null
         return try {
             val value = getter.invoke(block) as? Enum<*> ?: return null
-            // The shape enums carry the wording DO's own tooltip uses; the rest name themselves.
             val langName = MineColoniesReflect.invoke(value, "getLangName").orElse(null)
             if (langName is String && langName.isNotBlank()) langName else Text.humanize(value.name)
         } catch (t: Throwable) {
@@ -117,9 +101,8 @@ object DomumOrnamentumResolver {
     }
 
     /**
-     * The getter is matched on its return type rather than its name: every family names it
-     * differently (getFramedLightType, getTimberFrameType, getType), but they all hand back an
-     * enum declared by Domum Ornamentum.
+     * Matched on return type, not name: every family names the getter differently but they all
+     * hand back a DO enum. Name order breaks ties so a block exposing two stays stable.
      */
     private fun findVariantGetter(blockClass: Class<*>): Optional<Method> {
         var found: Method? = null
@@ -130,8 +113,6 @@ object DomumOrnamentumResolver {
                 || !method.returnType.name.startsWith(DO_PACKAGE)) {
                 continue
             }
-            // getMethods() has no defined order, so a block exposing more than one would otherwise
-            // report a different shape from run to run. Name order is arbitrary but stable.
             if (found == null || method.name < found.name) {
                 found = method
             }

@@ -44,8 +44,7 @@ object ScanCoercion {
 
     fun <T : ItemInfo> fillItem(target: T, stack: ItemStack): T {
         target.itemKey = DomumOrnamentumResolver.textureKeyFor(stack)
-        // Domum Ornamentum builds its names out of translatable components, and a dedicated server
-        // loads no modded language files — getString() would leave the raw key behind.
+        // A dedicated server loads no modded language files, so getString() leaves the raw key.
         target.name = Text.componentString(stack.hoverName) ?: stack.hoverName.string
         target.domum = DomumOrnamentumResolver.isDomum(stack)
         if (target.domum) {
