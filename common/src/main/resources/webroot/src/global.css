@@ -74,6 +74,7 @@
 main[data-tint="overview"]  { --tint: #e08a6b; --tint-soft: oklch(0.42 0.09 40 / 0.35); }
 main[data-tint="map"]       { --tint: oklch(0.78 0.15 165); --tint-soft: oklch(0.42 0.1 165 / 0.3); }
 main[data-tint="buildings"] { --tint: oklch(0.72 0.1 75); --tint-soft: oklch(0.4 0.08 75 / 0.3); }
+main[data-tint="needed"]    { --tint: oklch(0.76 0.13 330); --tint-soft: oklch(0.42 0.1 330 / 0.35); }
 main[data-tint="citizens"]  { --tint: oklch(0.83 0.1 250); --tint-soft: oklch(0.4 0.11 250 / 0.3); }
 main[data-tint="research"]  { --tint: oklch(0.78 0.12 290); --tint-soft: oklch(0.45 0.1 290 / 0.4); }
 main[data-tint="combat"]    { --tint: oklch(0.72 0.15 15); --tint-soft: oklch(0.5 0.12 15 / 0.4); }
