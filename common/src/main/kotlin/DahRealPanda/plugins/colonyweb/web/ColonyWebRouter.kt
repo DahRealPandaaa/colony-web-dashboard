@@ -22,8 +22,9 @@ data class ColonyWebServices(
 
 class ColonyWebRouter(
     private val services: ColonyWebServices,
+    bindAddress: String,
     port: Int
-) : NanoHTTPD("0.0.0.0", port) {
+) : NanoHTTPD(bindAddress, port) {
 
     // ---- NanoHTTPD entry point ----
 
@@ -236,6 +237,9 @@ class ColonyWebRouter(
     // ---- Texture PNG ----
 
     private fun handleTexture(session: IHTTPSession, filename: String): Response {
+        // The client percent-encodes the key (Domum Ornamentum variants carry a "#"), and NanoHTTPD
+        // already percent-decodes session.uri before serve() sees it, so `filename` is the decoded
+        // key. Decoding again here would be a second pass over data that is no longer encoded.
         val key = filename.removeSuffix(".png")
         val png = services.textureFacade.getTexture(key)
         return if (png != null) {

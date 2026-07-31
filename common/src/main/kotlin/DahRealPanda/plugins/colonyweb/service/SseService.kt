@@ -18,10 +18,7 @@ class SseService {
     }
 
     fun broadcast(jsonData: String) {
-        val event = SseEvent(data = jsonData, event = "update")
-        for (l in listeners) {
-            try { l(event) } catch (_: Exception) { /* client disconnected */ }
-        }
+        deliver(SseEvent(data = jsonData, event = "update"))
     }
 
     fun broadcast(data: JsonObject) {
@@ -29,10 +26,29 @@ class SseService {
     }
 
     fun heartbeat() {
-        for (l in listeners) {
-            try { l(SseEvent(data = ": ping")) } catch (_: Exception) {}
+        deliver(SseEvent(data = ": ping"))
+    }
+
+    /**
+     * Delivers [event] to every listener, dropping the ones that throw. A listener only fails once
+     * its client is gone, and a caller that never got to unsubscribe cannot remove it either, so
+     * keeping it would make every later broadcast pay its exception cost and let the queue grow
+     * without bound.
+     */
+    private fun deliver(event: SseEvent) {
+        val it = listeners.iterator()
+        while (it.hasNext()) {
+            val listener = it.next()
+            try {
+                listener(event)
+            } catch (_: Exception) {
+                it.remove() // client disconnected
+            }
         }
     }
 
-    fun closeAll() = Unit
+    /** Drops every listener, so restarting the service does not inherit the previous run's clients. */
+    fun closeAll() {
+        listeners.clear()
+    }
 }

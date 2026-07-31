@@ -36,21 +36,16 @@ java {
     toolchain.languageVersion = JavaLanguageVersion.of(java_version as int)
 }
 
-java {
-    toolchain.languageVersion = JavaLanguageVersion.of(java_version as int)
-}
-
 sourceSets.main.java.srcDir "$rootDir/common/src/main/java"
 sourceSets.main.kotlin.srcDir "$rootDir/common/src/main/kotlin"
-// Only the built dashboard ships: the TypeScript sources, the dev mock server and the build
-// tooling all stay out of the jar. `js/app.js` and `style.css` are produced by buildFrontend.
+// npm leaves its install and cache directories inside webroot, and they are untracked, so whether
+// they exist depends on what the developer last ran rather than on the commit being built. Without
+// this the same commit produces a lean jar on CI and one carrying thousands of dependency files
+// locally.
 sourceSets.main.resources {
     srcDir "$rootDir/common/src/main/resources"
-    exclude 'webroot/node_modules/**', 'webroot/src/**', 'webroot/mock-server/**',
-            'webroot/package*.json', 'webroot/tsconfig*.json', 'webroot/vite.config.ts',
-            'webroot/.gitignore', 'webroot/old-style.css'
+    exclude 'webroot/node_modules/**', 'webroot/.vite/**'
 }
-
 
 // Expand ${...} placeholders in the mod metadata. Every property this version project declares
 // is available, so a metadata file can reference forge_version_range or neoforge_version_range
@@ -73,43 +68,6 @@ tasks.named('processResources', ProcessResources).configure {
     filesMatching(['META-INF/mods.toml', 'META-INF/neoforge.mods.toml', 'pack.mcmeta']) {
         expand replaceProperties + [project: project]
     }
-}
-
-// Resolve the correct npm/npx executable name on Windows vs Unix.
-def npmCmd() {
-    return System.getProperty('os.name').toLowerCase(Locale.ROOT).contains('win') ? 'npm.cmd' : 'npm'
-}
-def npxCmd() {
-    return System.getProperty('os.name').toLowerCase(Locale.ROOT).contains('win') ? 'npx.cmd' : 'npx'
-}
-
-def frontendDir = file("$rootDir/common/src/main/resources/webroot")
-
-tasks.register('npmInstallFrontend', Exec) {
-    workingDir = frontendDir
-    commandLine npmCmd(), 'ci'
-    inputs.file("$frontendDir/package.json")
-    inputs.file("$frontendDir/package-lock.json")
-    outputs.dir("$frontendDir/node_modules")
-}
-
-tasks.register('buildFrontend', Exec) {
-    dependsOn npmInstallFrontend
-    workingDir = frontendDir
-    commandLine npxCmd(), 'vite', 'build'
-    inputs.dir("$frontendDir/src")
-    inputs.file("$frontendDir/tsconfig.json")
-    inputs.file("$frontendDir/vite.config.ts")
-    // Tailwind scans index.html for classes, so its markup is a build input too.
-    inputs.file("$frontendDir/index.html")
-    outputs.file("$frontendDir/js/app.js")
-    outputs.file("$frontendDir/style.css")
-    // Always rebuild — Vite is fast and stale frontend artifacts are a persistent source of bugs.
-    outputs.upToDateWhen { false }
-}
-
-tasks.named('processResources', ProcessResources).configure {
-    dependsOn buildFrontend
 }
 
 // Lets the mod read its own coordinates at runtime.

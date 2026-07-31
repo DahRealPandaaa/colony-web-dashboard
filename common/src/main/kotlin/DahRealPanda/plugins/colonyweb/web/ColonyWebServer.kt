@@ -20,13 +20,14 @@ class ColonyWebServer(
     val isRunning: Boolean get() = router?.isAlive == true
 
     fun start() {
-        val r = ColonyWebRouter(services, port)
+        // An empty bindAddress would resolve to the loopback interface, silently making the
+        // dashboard local-only; fall back to the documented config default instead.
+        val host = bindAddress.ifBlank { "0.0.0.0" }
+        val r = ColonyWebRouter(services, host, port)
         r.start()
-        // NanoHTTPD ignores the bind address in its default constructor — it always binds 0.0.0.0.
-        // For a local Minecraft dashboard this is harmless; only localhost connections reach the port.
         router = r
         LOGGER.info("{} dashboard listening on http://{}:{}/ (auth {})", ColonyWeb.LOG,
-            bindAddress, port, if (authEnabled) "required" else "disabled")
+            host, port, if (authEnabled) "required" else "disabled")
     }
 
     fun stop() {
