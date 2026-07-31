@@ -32,6 +32,14 @@ export const TABS: TabDef[] = [
     icon: '<path d="M3 21h18"/><path d="M5 21V8l7-5 7 5v13"/><path d="M9 21v-6h6v6"/>',
   },
   {
+    id: 'needed', label: 'Needed',
+    title: 'Still needed', subtitle: 'What every build site put together is short of',
+    tint: 'needed', iconEmoji: '📋',
+    icon: '<path d="M9 4h6a1 1 0 0 1 1 1v1H8V5a1 1 0 0 1 1-1z"/>'
+      + '<path d="M8 6H6.5A1.5 1.5 0 0 0 5 7.5v12A1.5 1.5 0 0 0 6.5 21h11a1.5 1.5 0 0 0 1.5-1.5v-12A1.5 1.5 0 0 0 17.5 6H16"/>'
+      + '<path d="M9 12h6"/><path d="M9 16h4"/>',
+  },
+  {
     id: 'citizens', label: 'Citizens',
     title: 'Citizens', subtitle: 'Skills, mood and what everyone is carrying',
     tint: 'citizens', iconEmoji: '👤',
