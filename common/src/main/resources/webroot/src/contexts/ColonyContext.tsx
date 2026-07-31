@@ -33,30 +33,24 @@ type SectionName = 'citizens' | 'research' | 'combat' | 'map'
 type LoadedSections = Record<SectionName, boolean>
 
 /** Zeroed stats so the overview renders before the first snapshot arrives. */
-function emptyStats(): ColonyStats {
-  return {
-    citizens: 0, maxCitizens: 0, children: 0, unemployed: 0,
-    happiness: 0, saturation: 0,
-    buildings: 0, decorations: 0, workOrders: 0, builders: 0, guards: 0,
-    warehouseTypes: 0, warehouseItems: 0,
-    researchCompleted: 0, researchInProgress: 0,
-    raided: false, nightsSinceRaid: 0,
-  }
+const EMPTY_STATS: ColonyStats = {
+  citizens: 0, maxCitizens: 0, children: 0, unemployed: 0,
+  happiness: 0, saturation: 0,
+  buildings: 0, decorations: 0, workOrders: 0, builders: 0, guards: 0,
+  warehouseTypes: 0, warehouseItems: 0,
+  researchCompleted: 0, researchInProgress: 0,
+  raided: false, nightsSinceRaid: 0,
 }
 
-function emptySnapshot(): ColonySnapshot {
-  return {
-    id: 0, name: '', dimension: '', owner: '',
-    builders: [], workOrders: [], buildings: [],
-    warehouse: { present: false, stacks: [] },
-    stats: emptyStats(),
-    workOrdersById: {},
-  }
+const EMPTY_SNAPSHOT: ColonySnapshot = {
+  id: 0, name: '', dimension: '', owner: '',
+  builders: [], workOrders: [], buildings: [],
+  warehouse: { present: false, stacks: [] },
+  stats: EMPTY_STATS,
+  workOrdersById: {},
 }
 
-function noSections(): LoadedSections {
-  return { citizens: false, research: false, combat: false, map: false }
-}
+const NO_SECTIONS: LoadedSections = { citizens: false, research: false, combat: false, map: false }
 
 export interface ColonyState {
   colonies: ColonySummary[]
@@ -91,7 +85,7 @@ export interface ColonyState {
   closeCitizen: () => void
 }
 
-const ColonyContext = createContext<ColonyState>(null!)
+const ColonyContext = createContext<ColonyState | null>(null)
 
 /** Read `#<colonyId>/<tab>` out of the address bar. */
 function readHash(): { colonyId: number | null; tab: TabId | null } {
@@ -116,12 +110,12 @@ export function ColonyProvider({ children }: { children: ReactNode }) {
 
   const [colonies, setColonies] = useState<ColonySummary[]>([])
   const [colonyId, setColonyId] = useState<number | null>(initial.colonyId)
-  const [snap, setSnap] = useState<ColonySnapshot>(emptySnapshot)
+  const [snap, setSnap] = useState<ColonySnapshot>(EMPTY_SNAPSHOT)
   const [citizens, setCitizens] = useState<CitizenInfo[]>([])
   const [research, setResearch] = useState<ResearchInfo | null>(null)
   const [combat, setCombat] = useState<CombatInfo | null>(null)
   const [map, setMap] = useState<MapInfo | null>(null)
-  const [loaded, setLoaded] = useState<LoadedSections>(noSections)
+  const [loaded, setLoaded] = useState<LoadedSections>(NO_SECTIONS)
   const [tab, setTabState] = useState<TabId>(initial.tab ?? 'overview')
   const [connection, setConnection] = useState<'connecting' | 'live' | 'down'>('connecting')
 
@@ -234,12 +228,12 @@ export function ColonyProvider({ children }: { children: ReactNode }) {
 
   const selectColony = useCallback((id: number) => {
     setColonyId(id)
-    setSnap(emptySnapshot())
+    setSnap(EMPTY_SNAPSHOT)
     setCitizens([])
     setResearch(null)
     setCombat(null)
     setMap(null)
-    setLoaded(noSections())
+    setLoaded(NO_SECTIONS)
     setBuilding(null)
     setCitizen(null)
     setCitizenInventory([])
@@ -248,7 +242,7 @@ export function ColonyProvider({ children }: { children: ReactNode }) {
 
   const setTab = useCallback((id: TabId) => setTabState(id), [])
 
-  const stats = snap.stats || emptyStats()
+  const stats = snap.stats || EMPTY_STATS
 
   const tabCount = useCallback((id: TabId): number | null => {
     switch (id) {
@@ -293,7 +287,7 @@ export function ColonyProvider({ children }: { children: ReactNode }) {
     if (colonyId != null) loadSnapshot()
   }, [colonyId, loadSnapshot])
 
-  // Whatever the visible tab needs, once.
+  // Load whatever section data the current tab displays, if not already present.
   useEffect(() => {
     if (colonyId != null) ensureSections(false)
   }, [colonyId, tab, ensureSections])

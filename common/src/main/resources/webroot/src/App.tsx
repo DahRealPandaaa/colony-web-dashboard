@@ -8,7 +8,6 @@ import House from './components/icons/House'
 function Dashboard() {
   const { authReady, signedIn } = useAuth()
 
-  // Waiting on /auth/me.
   if (!authReady) {
     return (
       <div className="login-wrap">

@@ -70,7 +70,7 @@ interface UiState {
 
 const DEFAULT_MAP_VIEW: MapView = { zoom: 1, panX: 0, panZ: 0, fitted: false }
 
-const UiContext = createContext<UiState>(null!)
+const UiContext = createContext<UiState | null>(null)
 
 export function UiProvider({ children }: { children: ReactNode }) {
   const { colonyId, map } = useColony()

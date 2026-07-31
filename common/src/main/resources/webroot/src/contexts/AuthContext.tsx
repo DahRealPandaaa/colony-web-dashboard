@@ -27,7 +27,7 @@ interface AuthCtx {
 
 const SIGNED_OUT: SessionResponse = { authEnabled: true, authenticated: false, user: null }
 
-const AuthContext = createContext<AuthCtx>(null!)
+const AuthContext = createContext<AuthCtx | null>(null)
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<SessionResponse | null>(null)

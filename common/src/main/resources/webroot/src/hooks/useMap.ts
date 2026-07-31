@@ -54,9 +54,9 @@ export function useMap() {
 
   // ---- view transform ----
 
-  const mapTransform: CSSProperties = {
+  const mapTransform = useMemo<CSSProperties>(() => ({
     transform: `translate(${panX}px, ${panZ}px) scale(${zoom})`,
-  }
+  }), [panX, panZ, zoom])
 
   /** Markers are placed in block space and un-scaled, so they keep their size. */
   const markerStyle = useCallback((x: number, z: number, size: number): CSSProperties => {
