@@ -85,10 +85,8 @@ neoForge {
     // which is what lets common/ compile against both without a preprocessor. There is also no
     // reobfuscation step here for the same reason.
 
-    // ModDevGradle only puts Minecraft and NeoForge on the main source set's classpath. The unit
-    // tests compile against common/, which imports net.minecraft types, so they need it too. This
-    // is deliberately not `unitTest { enable() }`: that starts a real NeoForge instance, and these
-    // are plain JVM tests that must not load the game.
+    // ModDevGradle only puts Minecraft on the main source set's classpath, and the tests compile
+    // against common/. Deliberately not `unitTest { enable() }`: that starts a real NeoForge.
     addModdingDependenciesTo sourceSets.test
 
     mods {

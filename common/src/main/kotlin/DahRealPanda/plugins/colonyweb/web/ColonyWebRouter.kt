@@ -32,11 +32,23 @@ class ColonyWebRouter(
         private const val TEXTURE_CACHE_MAX_AGE = 604_800L          // one week
         private const val STATIC_CACHE_MAX_AGE = 3600L              // one hour
         private const val SSE_HEARTBEAT_MS = 30_000L
+        const val MIME_EVENT_STREAM = "text/event-stream"
         private val SSE_CONNECTED_FRAME = ": connected\n\n".toByteArray(Charsets.UTF_8)
         private val SSE_HEARTBEAT_FRAME = ": heartbeat\n\n".toByteArray(Charsets.UTF_8)
+
+        /**
+         * NanoHTTPD compresses any `text/` response by wrapping the body in a GZIPOutputStream it
+         * only finishes when the body ends — which for an event stream is never, so every frame
+         * would sit in the compressor and the browser would see nothing (issue #38).
+         */
+        fun compressible(mimeType: String?): Boolean =
+            mimeType?.startsWith(MIME_EVENT_STREAM) != true
     }
 
     // ---- NanoHTTPD entry point ----
+
+    override fun useGzipWhenAccepted(r: Response): Boolean =
+        compressible(r.mimeType) && super.useGzipWhenAccepted(r)
 
     override fun serve(session: IHTTPSession): Response {
         return try {
@@ -221,7 +233,7 @@ class ColonyWebRouter(
         thread.name = "colonyweb-sse"
         thread.start()
 
-        val resp = newChunkedResponse(Status.OK, "text/event-stream", pipedIn)
+        val resp = newChunkedResponse(Status.OK, MIME_EVENT_STREAM, pipedIn)
         resp.addHeader("Cache-Control", "no-cache, no-store")
         resp.addHeader("Connection", "keep-alive")
         return resp
