@@ -1,8 +1,6 @@
 {
     "version": "2.0.0",
-    // Run configurations belong to a version project, so every task is addressed by project path.
-    // Pick which Minecraft version to run from the prompt; add new ones to the "mcVersion" input
-    // at the bottom when a versions/ directory is added.
+    // ── Shared input: pick which Minecraft version to run ──────────────
     "inputs": [
         {
             "id": "mcVersion",
@@ -15,10 +13,15 @@
             ]
         }
     ],
+    // ── Tasks ─────────────────────────────────────────────────────────
     "tasks": [
+        // Use "process" (not "shell") so PowerShell doesn't mangle
+        // "-PmcVersions=1.20.1-forge" into "-PmcVersions=1".
+        // The default command is the POSIX wrapper; the "windows" override swaps in gradlew.bat,
+        // so the same task works on Windows, macOS and Linux.
         {
             "label": "Minecraft: Run Client (Singleplayer)",
-            "type": "shell",
+            "type": "process",
             "command": "${workspaceFolder}/gradlew",
             "windows": {
                 "command": "${workspaceFolder}\\gradlew.bat"
@@ -45,7 +48,7 @@
         },
         {
             "label": "Minecraft: Run Dedicated Server",
-            "type": "shell",
+            "type": "process",
             "command": "${workspaceFolder}/gradlew",
             "windows": {
                 "command": "${workspaceFolder}\\gradlew.bat"
@@ -77,7 +80,7 @@
         },
         {
             "label": "Minecraft: Build All Versions",
-            "type": "shell",
+            "type": "process",
             "command": "${workspaceFolder}/gradlew",
             "windows": {
                 "command": "${workspaceFolder}\\gradlew.bat"

@@ -43,5 +43,9 @@ logs/
 .DS_Store
 Thumbs.db
 
-# Tailwind standalone CLI (build tool, not committed)
-tailwindcss.exe
+# Frontend tooling. Only dependencies are ignored — everything the server actually serves out of
+# webroot/ (style.css, js/) is committed, because the jar ships those files as-is.
+common/src/main/resources/webroot/node_modules/
+
+.playwright-mcp/
+.kotlin/
