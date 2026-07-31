@@ -5,11 +5,15 @@ package DahRealPanda.plugins.colonyweb.auth
  * hash — so a leaked [auth.json] cannot be replayed as a login.
  */
 class StoredSession {
-    var tokenHash: String = ""
-    var createdAt: Long = 0L
-    var expiresAt: Long = 0L
+    val tokenHash: String
+    val createdAt: Long
+    val expiresAt: Long
 
-    constructor()
+    constructor() {
+        tokenHash = ""
+        createdAt = 0L
+        expiresAt = 0L
+    }
 
     constructor(tokenHash: String, createdAt: Long, expiresAt: Long) {
         this.tokenHash = tokenHash

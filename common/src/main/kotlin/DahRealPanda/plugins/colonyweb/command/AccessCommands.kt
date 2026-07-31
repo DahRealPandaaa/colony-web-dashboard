@@ -14,10 +14,11 @@ import net.minecraft.network.chat.Style
 import net.minecraft.server.level.ServerPlayer
 
 /**
- * Bodies of the `/colonyweb sync`, `access` and `logout` subcommands.
- *
- * These run on the server thread, which is exactly where colony membership has to be read
- * from — so a sync always reflects the colonies as they stand right now.
+ * All colony-membership reads happen on the Minecraft server thread because
+ * MineColonies' data structures are not thread-safe — reading them from a
+ * background thread would race against tick-processing writes. Running sync
+ * and access commands in-band means every response reflects the colonies as
+ * they stand right now, with no stale window.
  */
 internal object AccessCommands {
     // ------------------------------------------------------------------

@@ -142,8 +142,7 @@ class TextureService(dataDir: Path, private val vanilla: VanillaAssetProvider) {
             }
             any = any or (image != null)
         }
-        @Suppress("UNCHECKED_CAST")
-        return if (any) assigned.filterValues { it != null } as Map<String, BufferedImage> else emptyMap()
+        return if (any) assigned.filterValues { it != null }.mapValues { (_, v) -> v!! } else emptyMap()
     }
 
     private fun sharesWord(a: String, b: String): Boolean {

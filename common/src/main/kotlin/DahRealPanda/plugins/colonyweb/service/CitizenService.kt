@@ -73,12 +73,12 @@ class CitizenService {
                 LOGGER.debug("[ColonyWeb] failed to read a citizen", t)
             }
         }
-        citizensList.sortWith { a, b ->
+        val sorted = citizensList.sortedWith { a, b ->
             val byJob = jobRank(a) - jobRank(b)
             if (byJob != 0) byJob
             else ScanCoercion.stringOf(a.name, "").compareTo(ScanCoercion.stringOf(b.name, ""), ignoreCase = true)
         }
-        return CitizenResult(citizensList, inventoriesMap, rawList)
+        return CitizenResult(sorted, inventoriesMap, rawList)
     }
 
     private fun jobRank(c: CitizenInfo): Int {

@@ -17,18 +17,12 @@ import java.util.LinkedHashSet
 data class WebUser(
     var uuid: String = "",
     var name: String = "",
-    /** Colonies the player belongs to in-game (owner/officer/member). Replaced on each sync. */
     var colonies: MutableSet<Int> = LinkedHashSet(),
-    /** Colonies an operator granted explicitly. Survives re-syncs. */
     var granted: MutableSet<Int> = LinkedHashSet(),
-    /** Server operators see every colony. */
     var admin: Boolean = false,
-    /** Epoch millis of the last `/colonyweb sync`. */
     var syncedAt: Long = 0L,
-    /** Active browser sessions. Only token hashes are stored, never the tokens themselves. */
     var sessions: MutableList<StoredSession> = ArrayList()
 ) {
-    /** Every colony id this user may view (ignored when [admin] is set). */
     fun accessibleColonies(): Set<Int> {
         val all = LinkedHashSet(colonies)
         all.addAll(granted)

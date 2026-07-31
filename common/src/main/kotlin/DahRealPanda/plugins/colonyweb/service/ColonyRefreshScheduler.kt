@@ -25,11 +25,12 @@ class ColonyRefreshScheduler(
     private var scheduler: java.util.concurrent.ScheduledExecutorService? = null
 
     fun start() {
-        scheduler = Executors.newSingleThreadScheduledExecutor { runnable ->
+        val s = Executors.newSingleThreadScheduledExecutor { runnable ->
             Thread(runnable, "colonyweb-scheduler").also { it.isDaemon = true }
         }
+        scheduler = s
         val interval = maxOf(1, Config.refreshIntervalSeconds)
-        scheduler!!.scheduleAtFixedRate({ tick() }, interval.toLong(), interval.toLong(), TimeUnit.SECONDS)
+        s.scheduleAtFixedRate({ tick() }, interval.toLong(), interval.toLong(), TimeUnit.SECONDS)
     }
 
     fun stop() { scheduler?.shutdownNow(); scheduler = null }

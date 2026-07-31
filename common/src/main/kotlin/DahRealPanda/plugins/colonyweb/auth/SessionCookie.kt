@@ -28,7 +28,6 @@ object SessionCookie {
         return null
     }
 
-    /** Issue the session cookie for [maxAgeSeconds]. */
     @JvmStatic
     fun set(exchange: HttpExchange, token: String, maxAgeSeconds: Long) {
         exchange.responseHeaders.add(
@@ -37,7 +36,6 @@ object SessionCookie {
         )
     }
 
-    /** Expire the session cookie immediately. */
     @JvmStatic
     fun clear(exchange: HttpExchange) {
         exchange.responseHeaders.add(

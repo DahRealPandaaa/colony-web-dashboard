@@ -26,6 +26,16 @@ class ColonyWebRouter(
     port: Int
 ) : NanoHTTPD(bindAddress, port) {
 
+    companion object {
+        private const val SESSION_COOKIE_MAX_AGE = 7L * 24 * 3600   // one week
+        private const val MAP_CACHE_MAX_AGE = 30L                   // 30 seconds
+        private const val TEXTURE_CACHE_MAX_AGE = 604_800L          // one week
+        private const val STATIC_CACHE_MAX_AGE = 3600L              // one hour
+        private const val SSE_HEARTBEAT_MS = 30_000L
+        private val SSE_CONNECTED_FRAME = ": connected\n\n".toByteArray(Charsets.UTF_8)
+        private val SSE_HEARTBEAT_FRAME = ": heartbeat\n\n".toByteArray(Charsets.UTF_8)
+    }
+
     // ---- NanoHTTPD entry point ----
 
     override fun serve(session: IHTTPSession): Response {
@@ -113,7 +123,7 @@ class ColonyWebRouter(
         val (token, loginResp) = services.authFacade.login(code)
         val status = if (loginResp.error != null) Status.FORBIDDEN else Status.OK
         val resp = json(status, JsonUtil.toJson(loginResp))
-        if (token != null) setSessionCookie(resp, token, 7 * 24 * 3600)
+        if (token != null) setSessionCookie(resp, token, SESSION_COOKIE_MAX_AGE)
         return resp
     }
 
@@ -191,13 +201,13 @@ class ColonyWebRouter(
 
         val thread = Thread {
             try {
-                pipedOut.write(": connected\n\n".toByteArray(Charsets.UTF_8))
+                pipedOut.write(SSE_CONNECTED_FRAME)
                 pipedOut.flush()
                 // Keep the connection open with periodic heartbeats.
                 while (!Thread.interrupted()) {
-                    Thread.sleep(30_000)
+                    Thread.sleep(SSE_HEARTBEAT_MS)
                     try {
-                        pipedOut.write(": heartbeat\n\n".toByteArray(Charsets.UTF_8))
+                        pipedOut.write(SSE_HEARTBEAT_FRAME)
                         pipedOut.flush()
                     } catch (_: Exception) { break }
                 }
@@ -226,7 +236,7 @@ class ColonyWebRouter(
         return if (png != null) {
             val resp = newFixedLengthResponse(Status.OK, "image/png",
                 ByteArrayInputStream(png), png.size.toLong())
-            resp.addHeader("Cache-Control", "public, max-age=30")
+            resp.addHeader("Cache-Control", "public, max-age=$MAP_CACHE_MAX_AGE")
             resp
         } else {
             newFixedLengthResponse(Status.NOT_FOUND, "image/png",
@@ -245,7 +255,7 @@ class ColonyWebRouter(
         return if (png != null) {
             val resp = newFixedLengthResponse(Status.OK, "image/png",
                 ByteArrayInputStream(png), png.size.toLong())
-            resp.addHeader("Cache-Control", "public, max-age=604800")
+            resp.addHeader("Cache-Control", "public, max-age=$TEXTURE_CACHE_MAX_AGE")
             resp
         } else {
             newFixedLengthResponse(Status.NOT_FOUND, "image/png",
@@ -271,7 +281,7 @@ class ColonyWebRouter(
             }
             val resp = newFixedLengthResponse(Status.OK, mime, ByteArrayInputStream(bytes), bytes.size.toLong())
             if (mime in setOf("image/png", "image/svg+xml", "application/javascript", "text/css")) {
-                resp.addHeader("Cache-Control", "public, max-age=3600, immutable")
+                resp.addHeader("Cache-Control", "public, max-age=$STATIC_CACHE_MAX_AGE, immutable")
             }
             return resp
         }

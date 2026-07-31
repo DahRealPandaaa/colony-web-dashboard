@@ -35,7 +35,7 @@ object MineColoniesReflect {
             loaded = present
             LOGGER.info("[ColonyWeb] MineColonies detected: {}", present)
         }
-        return loaded!!
+        return loaded ?: false.also { loaded = false }
     }
 
     fun resolve(fqcn: String): Optional<Class<*>> {

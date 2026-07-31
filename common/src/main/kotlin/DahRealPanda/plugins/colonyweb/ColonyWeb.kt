@@ -24,7 +24,8 @@ object ColonyWeb {
 
     private val LOGGER: Logger = LogUtils.getLogger()
 
-    /** Bring the dashboard up. */
+    // MineColonies presence is checked at startup (not lazily) so the /colonyweb command
+    // knows whether to show the "MineColonies not installed" help text before the first scan.
     @JvmStatic
     fun serverStarting(server: MinecraftServer) {
         LOGGER.info("{} server starting — MineColonies loaded: {}", LOG,
@@ -32,14 +33,14 @@ object ColonyWeb {
         ColonyWebService.start(server)
     }
 
-    /** Take it back down. */
+    // Shut down the scheduler and HTTP server to release bound ports and daemon threads
+    // before the Minecraft server process exits.
     @JvmStatic
     fun serverStopping() {
         LOGGER.info("{} server stopping — shutting down dashboard", LOG)
         ColonyWebService.stop()
     }
 
-    /** Register the `/colonyweb` command tree. */
     @JvmStatic
     fun registerCommands(dispatcher: CommandDispatcher<CommandSourceStack>) {
         ColonyWebCommand.register(dispatcher)
