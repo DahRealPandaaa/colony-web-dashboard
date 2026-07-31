@@ -12,7 +12,8 @@ Seven tabs, every one of them live — colony data streams in over SSE, so nothi
 
 <!-- Screenshots live in docs/screenshots/. Every tab below already has its image line written
      out and commented; add the matching PNG and uncomment the line to make it appear.
-     docs/screenshots/README.md has the capture and sizing notes. -->
+     Keep them 850px wide or narrower — CurseForge reuses this page and clips anything wider.
+     docs/screenshots/README.md has the rest of the capture notes. -->
 
 ### Overview
 

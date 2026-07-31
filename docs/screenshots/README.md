@@ -16,17 +16,27 @@ and it renders.
 
 ## Capturing them
 
-- Shoot the whole dashboard, sidebar included, so the tab being shown is obvious.
-- 1600px wide is plenty — GitHub scales anything wider down to the column and the extra
-  bytes ship in every clone. Keep files under ~500 KB.
-- PNG, not JPEG. The UI is flat colour and text; JPEG will smear it.
+- **Maximum width 850px.** This is a hard limit, not a suggestion: the CurseForge project
+  description reuses these images, and it does not scale anything wider to fit — a 1600px
+  screenshot gets clipped there even though GitHub renders it fine. Resize the file itself;
+  an `<img width="850">` tag only fixes the GitHub side, because CurseForge strips the
+  attribute and shows the image at its true size.
+- Shoot the whole dashboard, sidebar included, so the tab being shown is obvious. Capture at
+  a narrow browser width rather than shooting wide and downscaling — 850px of a 2560px window
+  turns the UI text to mush.
+- PNG, not JPEG. The UI is flat colour and text; JPEG will smear it. Under ~500 KB a file,
+  which 850px width makes easy.
 - Use a colony with enough going on to fill the view — a fresh colony makes every tab look
   broken.
 - Names are cosmetic, but they are still player names. Use a test world or a colony whose
   members are fine appearing in the repo.
 
-To size an image down in the README, swap the Markdown line for HTML:
+Check a file before committing it:
 
-```html
-<img src="docs/screenshots/overview.png" alt="The Overview tab" width="800">
+```sh
+# ImageMagick
+identify -format '%f %wx%h\n' docs/screenshots/*.png
+
+# or, resize one that came out too wide (never upscales)
+magick overview.png -resize 850x\> overview.png
 ```
