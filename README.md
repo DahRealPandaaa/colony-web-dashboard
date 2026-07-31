@@ -24,11 +24,13 @@ All tabs update in real time — no manual refresh needed.
 
 ## Dependencies
 
-| Mod | Required | Notes |
-|---|---|---|
-| [MineColonies](https://www.curseforge.com/minecraft/mc-mods/minecolonies) | Yes | The mod is useless without it — the dashboard has no colonies to show. |
-| [Domum Ornamentum](https://www.curseforge.com/minecraft/mc-mods/domum-ornamentum) | Yes | Dynamically textured decorative blocks used by MineColonies builds. The dashboard shows their icons when installed. |
-| [KotlinForForge](https://www.curseforge.com/minecraft/mc-mods/kotlin-for-forge) | Yes | Provides the Kotlin standard library at runtime. Use the NeoForge variant for 1.21.1 and the Forge variant for 1.20.1. |
+All three are required — install them alongside ColonyWeb.
+
+| Mod | Notes |
+|---|---|
+| [KotlinForForge](https://www.curseforge.com/minecraft/mc-mods/kotlin-for-forge) | Provides the Kotlin runtime the mod is compiled against. Use the Forge variant for 1.20.1 and the NeoForge variant for 1.21.1. |
+| [MineColonies](https://www.curseforge.com/minecraft/mc-mods/minecolonies) | The source of every colony the dashboard renders. |
+| [Domum Ornamentum](https://www.curseforge.com/minecraft/mc-mods/domum-ornamentum) | Dynamically textured decorative blocks used by MineColonies builds. The dashboard shows their icons. |
 
 ---
 
@@ -47,12 +49,16 @@ File: `config/colonyweb-common.toml`
 
 | Option | Default | Description |
 |---|---|---|
-| `port` | `8723` | HTTP server port |
+| `httpPort` | `8723` | HTTP server port |
 | `bindAddress` | `0.0.0.0` | Bind address (set to `127.0.0.1` with a reverse proxy for production) |
-| `authEnabled` | `true` | Require pairing-code authentication |
-| `refreshIntervalSeconds` | `3` | How often colony data is scanned |
-| `idleTimeoutMinutes` | `20` | Session idle timeout |
-| `maxViewers` | `10` | Max concurrent SSE connections |
+| `publicHost` | *(blank)* | Host name used in the link `/colonyweb` prints. Blank means the server's detected address |
+| `refreshIntervalSeconds` | `3` | How often colony data is re-scanned and pushed over SSE |
+| `autoDownloadVanillaAssets` | `true` | Download the matching vanilla client jar on first start so vanilla item/block icons can be shown |
+| `mapEnabled` | `true` | Show the colony map tab |
+| `mapRadius` | `256` | How far from the colony centre the map reaches, in blocks |
+| `authEnabled` | `true` | Require pairing-code authentication. Turning this off makes the dashboard public to anyone who can reach the port |
+| `sessionDays` | `30` | How long a browser stays signed in after entering a pairing code |
+| `loginCodeMinutes` | `10` | How long a pairing code from `/colonyweb sync` stays valid |
 
 ---
 
@@ -60,14 +66,15 @@ File: `config/colonyweb-common.toml`
 
 | Command | Permission | Description |
 |---|---|---|
-| `/colonyweb sync` | Any | Generate a one-shot pairing code |
-| `/colonyweb access add <player>` | OP | Grant web access to a player |
-| `/colonyweb access remove <player>` | OP | Revoke web access |
-| `/colonyweb access list` | OP | List who has access |
-| `/colonyweb op <player>` | OP | Grant operator status on the web dashboard |
-| `/colonyweb deop <player>` | OP | Remove operator status |
-| `/colonyweb logout` | Any | Invalidate your own web sessions |
-| `/colonyweb status` | OP | Show auth and session stats |
+| `/colonyweb` | Any | Print the dashboard link |
+| `/colonyweb sync` | Any | Generate a one-shot pairing code for yourself |
+| `/colonyweb port` | Any | Show the port the dashboard is listening on |
+| `/colonyweb sync <player>` | OP | Issue a pairing code for someone else |
+| `/colonyweb access grant <player> <colony>` | OP | Grant a player access to one colony by ID |
+| `/colonyweb access revoke <player> <colony>` | OP | Take that grant away |
+| `/colonyweb access list <player>` | OP | Show which colonies a player can see |
+| `/colonyweb logout <player>` | OP | Invalidate all of a player's web sessions |
+| `/colonyweb status` | OP | Show service, auth and session stats |
 
 ## Signing In
 
@@ -75,7 +82,7 @@ File: `config/colonyweb-common.toml`
 2. Open your browser to the server's dashboard URL.
 3. Type the code into the pairing screen. Codes are case-insensitive.
 
-The code is single-use and expires after 20 minutes by default.
+The code is single-use and expires after 10 minutes by default (`loginCodeMinutes`). Once accepted, the browser stays signed in for `sessionDays` — 30 days by default.
 
 ## Troubleshooting
 
@@ -83,10 +90,10 @@ The code is single-use and expires after 20 minutes by default.
 |---|---|
 | Page won't load / connection refused | Server port not reachable — check firewall and port forwarding |
 | "No colonies to show" | Player hasn't joined a MineColonies colony yet, or the pairing code was for a different player |
-| Pairing code not accepted | Code expired (20 min limit) or already used — run `/colonyweb sync` again |
+| Pairing code not accepted | Code expired (`loginCodeMinutes`, 10 min by default) or already used — run `/colonyweb sync` again |
 | Dashboard loads but all tabs are empty | MineColonies not installed or not loaded on the server |
 | Images / textures missing | First load downloads vanilla assets — may take a minute on slow connections |
-| SSE disconnects frequently | Check `idleTimeoutMinutes` and network proxy settings |
+| SSE disconnects frequently | A reverse proxy in front of the dashboard is buffering or timing out the event stream — disable response buffering and raise the read timeout for the dashboard route |
 
 See the server log (`latest.log`) for lines prefixed with `[ColonyWeb]`.
 

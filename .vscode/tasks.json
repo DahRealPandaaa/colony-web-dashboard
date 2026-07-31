@@ -17,11 +17,16 @@
     "tasks": [
         // Use "process" (not "shell") so PowerShell doesn't mangle
         // "-PmcVersions=1.20.1-forge" into "-PmcVersions=1".
+        // The default command is the POSIX wrapper; the "windows" override swaps in gradlew.bat,
+        // so the same task works on Windows, macOS and Linux.
         {
             "label": "Minecraft: Run Client (Singleplayer)",
             "type": "process",
             "command": "${workspaceFolder}/gradlew",
-            "windows": { "command": "${workspaceFolder}\\gradlew.bat" },
+            "windows": {
+                "command": "${workspaceFolder}\\gradlew.bat"
+            },
+            "args": [
                 ":versions:${input:mcVersion}:runClient",
                 "-PmcVersions=${input:mcVersion}",
                 "--console=plain"
@@ -44,7 +49,10 @@
         {
             "label": "Minecraft: Run Dedicated Server",
             "type": "process",
-            "command": "${workspaceFolder}\\gradlew.bat",
+            "command": "${workspaceFolder}/gradlew",
+            "windows": {
+                "command": "${workspaceFolder}\\gradlew.bat"
+            },
             "args": [
                 ":versions:${input:mcVersion}:runServer",
                 "-PmcVersions=${input:mcVersion}",
@@ -73,7 +81,10 @@
         {
             "label": "Minecraft: Build All Versions",
             "type": "process",
-            "command": "${workspaceFolder}\\gradlew.bat",
+            "command": "${workspaceFolder}/gradlew",
+            "windows": {
+                "command": "${workspaceFolder}\\gradlew.bat"
+            },
             "args": [
                 "build",
                 "--console=plain"

@@ -1,3 +1,3 @@
 - [ ] Changes tested on both Forge 1.20.1 and NeoForge 1.21.1
-- [ ] Frontend builds clean (`npm ci && npx vite build`)
-- [ ] No new warnings in `./gradlew build`
+- [ ] `./gradlew build` succeeds with no new warnings
+- [ ] Dashboard checked in a browser if anything under `common/src/main/resources/webroot/` changed
