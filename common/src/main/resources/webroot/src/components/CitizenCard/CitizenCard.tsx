@@ -24,35 +24,35 @@ export default function CitizenCard({ citizen: c, skills, onOpen }: Props) {
         />
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2">
-            <span className="font-bold text-[16px] truncate">{c.name}</span>
+            <span className="font-bold text-base truncate">{c.name}</span>
             {c.child && <span className="ba b-repair">Child</span>}
             <span
               className={`w-1.5 h-1.5 rounded-full shrink-0 ml-auto ${c.spawned ? 'bg-emerald-400' : 'bg-ink-700'}`}
               title={c.spawned ? 'Loaded in the world' : 'Not loaded'}
             />
           </div>
-          <div className="text-[12.5px] text-accent-soft font-semibold truncate">{c.job}</div>
-          <div className="text-[12.5px] text-slate-400 truncate">{c.workBuilding || 'No workplace'}</div>
+          <div className="text-xs text-accent-soft font-semibold truncate">{c.job}</div>
+          <div className="text-xs text-slate-400 truncate">{c.workBuilding || 'No workplace'}</div>
         </div>
       </div>
 
       <div className="mt-3 space-y-2">
         <div>
-          <div className="flex justify-between text-[12px] text-slate-400 mb-1">
+          <div className="flex justify-between text-xs text-slate-400 mb-1">
             <span>Health</span>
             <span className="tabular-nums">{c.health.toFixed(0)} / {c.maxHealth.toFixed(0)}</span>
           </div>
           <Meter variant="hp" pct={pct(c.health, c.maxHealth)} />
         </div>
         <div>
-          <div className="flex justify-between text-[12px] text-slate-400 mb-1">
+          <div className="flex justify-between text-xs text-slate-400 mb-1">
             <span>Saturation</span>
             <span className="tabular-nums">{c.saturation.toFixed(1)}</span>
           </div>
           <Meter variant="food" pct={pct(c.saturation, 20)} />
         </div>
         <div>
-          <div className="flex justify-between text-[12px] text-slate-400 mb-1">
+          <div className="flex justify-between text-xs text-slate-400 mb-1">
             <span>Happiness</span>
             <span className="tabular-nums">{c.happiness.toFixed(1)}</span>
           </div>
@@ -66,7 +66,7 @@ export default function CitizenCard({ citizen: c, skills, onOpen }: Props) {
             <span>{s.name}</span><b className="tabular-nums">{s.level}</b>
           </span>
         ))}
-        <span className="ml-auto text-[12px] text-slate-400 tabular-nums">
+        <span className="ml-auto text-xs text-slate-400 tabular-nums">
           {c.inventoryUsed}/{c.inventorySize}
         </span>
       </div>

@@ -17,7 +17,6 @@ export function useBuildings() {
     buildingSearch, setBuildingSearch,
   } = useUi()
 
-  // ---- work-order lookups ----
 
   /** The work order for a building, via the index built when the snapshot loads. */
   const workOrder = (b: BuildingInfo): WorkOrderInfo | null =>
@@ -49,7 +48,6 @@ export function useBuildings() {
     return textureUrl('minecolonies:blockhut' + path)
   }
 
-  // ---- list ----
 
   const visibleBuildings = useMemo(() => {
     let list = (snap.buildings || []).slice()
@@ -80,7 +78,6 @@ export function useBuildings() {
     })
   }, [snap.buildings, snap.workOrdersById, showDecorations, onlyInProgress, search, sort])
 
-  // ---- detail modal ----
 
   /** Requirements for the open building, searched and sorted missing-first. */
   const buildingResources = useMemo(() => {

@@ -15,7 +15,7 @@ function Dashboard() {
           <span className="brand-mark w-11 h-11 animate-pulse-soft">
             <House size={24} />
           </span>
-          <span className="text-[14px] text-slate-400">Connecting to the colony…</span>
+          <span className="text-sm text-slate-400">Connecting to the colony…</span>
         </div>
       </div>
     )

@@ -18,8 +18,8 @@ export default function GuardPostCard({ post: p, status }: Props) {
         onError={e => postIconFallback(e.currentTarget, p)}
       />
       <div className="flex-1 min-w-0">
-        <div className="font-semibold text-[14.5px] truncate">{p.name}</div>
-        <div className="text-[12.5px] text-slate-400">
+        <div className="font-semibold text-sm truncate">{p.name}</div>
+        <div className="text-xs text-slate-400">
           Level {p.level} · {p.assigned}/{p.capacity} staffed
         </div>
       </div>

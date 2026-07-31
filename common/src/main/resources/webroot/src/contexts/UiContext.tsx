@@ -25,7 +25,6 @@ export interface MapView {
 }
 
 interface UiState {
-  // Buildings tab
   search: string
   setSearch: (v: string) => void
   sort: BuildingSort
@@ -37,7 +36,6 @@ interface UiState {
   buildingSearch: string
   setBuildingSearch: (v: string) => void
 
-  // Citizens tab
   citizenSearch: string
   setCitizenSearch: (v: string) => void
   citizenJob: string
@@ -45,19 +43,16 @@ interface UiState {
   citizenSort: CitizenSort
   setCitizenSort: (v: CitizenSort) => void
 
-  // Research tab
   researchBranch: string
   setResearchBranch: (v: string) => void
   researchFilter: ResearchFilter
   setResearchFilter: (v: ResearchFilter) => void
 
-  // Warehouse tab
   whSearch: string
   setWhSearch: (v: string) => void
   whSort: WarehouseSort
   setWhSort: (v: WarehouseSort) => void
 
-  // Map tab
   mapView: MapView
   setMapView: (next: MapView | ((prev: MapView) => MapView)) => void
   showBuildings: boolean

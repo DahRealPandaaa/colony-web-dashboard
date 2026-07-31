@@ -32,6 +32,11 @@ const TAB_SECTIONS: Record<string, string[]> = {
 type SectionName = 'citizens' | 'research' | 'combat' | 'map'
 type LoadedSections = Record<SectionName, boolean>
 
+/** Type guard: `data` is a plain object, not null, not an array. */
+function isObject(data: unknown): data is Record<string, unknown> {
+  return data != null && typeof data === 'object' && !Array.isArray(data)
+}
+
 /** Zeroed stats so the overview renders before the first snapshot arrives. */
 const EMPTY_STATS: ColonyStats = {
   citizens: 0, maxCitizens: 0, children: 0, unemployed: 0,
@@ -142,7 +147,6 @@ export function ColonyProvider({ children }: { children: ReactNode }) {
     }
   }, [onUnauthorizedRef])
 
-  // ---- loading ----
 
   const loadSection = useCallback(async (section: SectionName) => {
     const id = colonyIdRef.current
@@ -151,10 +155,10 @@ export function ColonyProvider({ children }: { children: ReactNode }) {
       const data = await fetchColonySection<unknown>(id, section)
       // A late reply for a colony we have since left must not overwrite the new one.
       if (colonyIdRef.current !== id) return
-      if (section === 'citizens') setCitizens(data as CitizenInfo[])
-      else if (section === 'research') setResearch(data as ResearchInfo)
-      else if (section === 'combat') setCombat(data as CombatInfo)
-      else if (section === 'map') setMap(data as MapInfo)
+      if (section === 'citizens') setCitizens(Array.isArray(data) ? data as CitizenInfo[] : [])
+      else if (section === 'research') setResearch(isObject(data) ? data as unknown as ResearchInfo : null)
+      else if (section === 'combat') setCombat(isObject(data) ? data as unknown as CombatInfo : null)
+      else if (section === 'map') setMap(isObject(data) ? data as unknown as MapInfo : null)
       setLoaded(prev => ({ ...prev, [section]: true }))
     })
   }, [guarded, colonyIdRef])
@@ -224,8 +228,6 @@ export function ColonyProvider({ children }: { children: ReactNode }) {
     })
   }, [guarded, colonyIdRef])
 
-  // ---- colony + tab routing ----
-
   const selectColony = useCallback((id: number) => {
     setColonyId(id)
     setSnap(EMPTY_SNAPSHOT)
@@ -255,8 +257,6 @@ export function ColonyProvider({ children }: { children: ReactNode }) {
     }
   }, [snap, loaded.citizens, citizens.length, stats, research, combat])
 
-  // ---- modal selection ----
-
   const openBuilding = useCallback((b: BuildingInfo) => setBuilding(b), [])
   const closeBuilding = useCallback(() => setBuilding(null), [])
 
@@ -277,8 +277,6 @@ export function ColonyProvider({ children }: { children: ReactNode }) {
     if (citizen) loadCitizenDetail()
     // Only when a different citizen is opened, not on every detail refresh.
   }, [citizen?.id])
-
-  // ---- effects ----
 
   useEffect(() => { loadColonies() }, [loadColonies])
 

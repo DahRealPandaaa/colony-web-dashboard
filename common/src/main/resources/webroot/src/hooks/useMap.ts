@@ -52,13 +52,19 @@ export function useMap() {
   /** The terrain image, versioned so a redraw is never served from the browser cache. */
   const mapImageUrl = mapReady && colonyId != null ? `/map/${colonyId}.png?v=${map!.version}` : null
 
-  // ---- view transform ----
 
   const mapTransform = useMemo<CSSProperties>(() => ({
     transform: `translate(${panX}px, ${panZ}px) scale(${zoom})`,
   }), [panX, panZ, zoom])
 
-  /** Markers are placed in block space and un-scaled, so they keep their size. */
+  /**
+   * Markers are placed in block space and un-scaled, so they keep their size.
+   *
+   * The returned left/top/width/height are unitless block-coordinate deltas that React
+   * renders as px. This is the one place px is correct — these values come from map-math,
+   * not from a design decision, and there is no meaningful rem equivalent for a coordinate
+   * system anchored to block positions.
+   */
   const markerStyle = useCallback((x: number, z: number, size: number): CSSProperties => {
     if (!map) return { display: 'none' }
     return {
@@ -138,7 +144,6 @@ export function useMap() {
     zoomAt(event.deltaY < 0 ? 1.15 : 1 / 1.15, event.clientX - box.left, event.clientY - box.top)
   }, [zoomAt])
 
-  // ---- pointer handling ----
 
   const onMapDown = useCallback((event: PointerEvent) => {
     setDragging(true)
@@ -174,7 +179,6 @@ export function useMap() {
   /** A click that ended a pan must not also open the marker underneath it. */
   const clickedWithoutDrag = useCallback(() => !dragMoved.current, [])
 
-  // ---- markers ----
 
   /** Buildings, with the ones being worked on drawn last so they sit on top. */
   const mapBuildings = useMemo(() => {

@@ -133,12 +133,4 @@ export function postIconFallback(el: HTMLImageElement, post: Post) {
   ])
 }
 
-/** Kept as a hook for call-site symmetry with the other tab helpers. */
-export function useIcons() {
-  return {
-    buildingArt, buildingIcon, citizenArt, citizenArtFallback, citizenIcon,
-    buildingIconFallback, citizenIconFallback, postIconFallback,
-  }
-}
-
 export type { BuildingInfo }

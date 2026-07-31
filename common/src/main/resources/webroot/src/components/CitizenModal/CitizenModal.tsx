@@ -29,12 +29,12 @@ export default function CitizenModal() {
             onError={e => citizenIconFallback(e.currentTarget, citizen)}
           />
           <div className="min-w-0">
-            <h3 className="text-[21px] font-bold tracking-tight flex items-center gap-2.5 flex-wrap">
+            <h3 className="text-xl font-bold tracking-tight flex items-center gap-2.5 flex-wrap">
               <span>{citizen.name}</span>
               <span className="chip on">{citizen.job}</span>
               {citizen.child && <span className="ba b-repair">Child</span>}
             </h3>
-            <div className="flex gap-3 text-slate-400 text-[13.5px] mt-1 flex-wrap">
+            <div className="flex gap-3 text-slate-400 text-sm mt-1 flex-wrap">
               {citizen.workBuilding && <span>Works at {citizen.workBuilding}</span>}
               {citizen.homeBuilding && <span>Lives at {citizen.homeBuilding}</span>}
               <span className="tabular-nums">{citizen.x}, {citizen.y}, {citizen.z}</span>
@@ -70,7 +70,7 @@ export default function CitizenModal() {
             <div className="space-y-2">
               {(citizen.skills || []).map(s => (
                 <div key={s.name}>
-                  <div className="flex items-center justify-between text-[12.5px] mb-1">
+                  <div className="flex items-center justify-between text-xs mb-1">
                     <span className="flex items-center gap-1.5">
                       <span>{s.name}</span>
                       {s.role && <span className="ba b-upgrade">{s.role}</span>}

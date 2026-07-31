@@ -26,10 +26,10 @@ export function CombatTab() {
           <Shield />
         </span>
         <div className="min-w-0">
-          <div className={`font-bold text-[16px] ${combat.underAttack ? 'text-rose-300' : ''}`}>
+          <div className={`font-bold text-base ${combat.underAttack ? 'text-rose-300' : ''}`}>
             {c.raidHeadline}
           </div>
-          <div className="text-[14.5px] text-slate-400">{raidLine}</div>
+          <div className="text-sm text-slate-400">{raidLine}</div>
         </div>
       </div>
 
@@ -89,8 +89,8 @@ export function CombatTab() {
               <div className="panel-body space-y-2">
                 {combat.events.map(e => (
                   <div key={e.id} className="card p-3! border-rose-500/30! bg-rose-500/[0.05]!">
-                    <div className="font-semibold text-[14.5px]">{e.name}</div>
-                    <div className="text-[12.5px] text-slate-400 tabular-nums">
+                    <div className="font-semibold text-sm">{e.name}</div>
+                    <div className="text-xs text-slate-400 tabular-nums">
                       {e.status} · {e.x}, {e.y}, {e.z}
                     </div>
                   </div>

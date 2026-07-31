@@ -33,8 +33,6 @@ async function postForm(url: string, body?: Record<string, string>): Promise<Log
   return { ok: res.ok, status: res.status, data } as LoginResult
 }
 
-// ---- Auth endpoints ----
-
 export function fetchSession(): Promise<SessionResponse> {
   return getJson<SessionResponse>('/auth/me')
 }
@@ -46,8 +44,6 @@ export function loginWithCode(code: string): Promise<LoginResult> {
 export function logoutSession(): Promise<LoginResult> {
   return postForm('/auth/logout')
 }
-
-// ---- Colony endpoints ----
 
 export function fetchColonies(): Promise<ColonySummary[]> {
   return getJson<ColonySummary[]>('/api/colonies')
@@ -64,8 +60,6 @@ export function fetchColonySection<T>(colonyId: number, section: string): Promis
 export function fetchCitizenDetail(colonyId: number, citizenId: number): Promise<CitizenDetail> {
   return getJson<CitizenDetail>(`/api/colony/${colonyId}/citizen/${citizenId}`)
 }
-
-// ---- Textures ----
 
 const RENDER_VERSION = '3'
 

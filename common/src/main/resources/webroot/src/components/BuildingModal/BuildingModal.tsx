@@ -32,12 +32,12 @@ export default function BuildingModal() {
             onError={e => buildingIconFallback(e.currentTarget, building)}
           />
           <div className="min-w-0">
-            <h3 className="text-[21px] font-bold tracking-tight flex items-center gap-2.5 flex-wrap">
+            <h3 className="text-xl font-bold tracking-tight flex items-center gap-2.5 flex-wrap">
               <span>{building.name}</span>
               {action && <span className={`ba ${badgeClass(action)}`}>{action}</span>}
               {building.kind === 'decoration' && <span className="ba b-repair">Decoration</span>}
             </h3>
-            <div className="flex gap-3 text-slate-400 text-[13.5px] mt-1 flex-wrap">
+            <div className="flex gap-3 text-slate-400 text-sm mt-1 flex-wrap">
               <span className="tabular-nums">
                 {targetLevel ? `Level ${building.level} → ${targetLevel}` : `Level ${building.level}`}
               </span>
@@ -57,7 +57,7 @@ export default function BuildingModal() {
               src={textureUrl('minecolonies:blockhutbuilder')} alt="" />
             <div className="flex-1">
               <Progress pct={progress} big className="mt-0!" />
-              <div className="flex justify-between text-[12.5px] mt-2">
+              <div className="flex justify-between text-xs mt-2">
                 <span className="text-slate-400">
                   {builder && <>Being built by <b className="text-accent-soft">{builder}</b></>}
                 </span>

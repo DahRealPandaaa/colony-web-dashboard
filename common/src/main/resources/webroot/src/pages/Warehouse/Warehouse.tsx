@@ -42,7 +42,7 @@ export function WarehouseTab() {
       </div>
 
       {w.warehouseHidden > 0 && (
-        <p className="text-[12.5px] text-slate-400 text-center mt-3">
+        <p className="text-xs text-slate-400 text-center mt-3">
           {num(w.warehouseHidden)} more entries — narrow it down with the search box.
         </p>
       )}

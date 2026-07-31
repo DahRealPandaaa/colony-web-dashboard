@@ -32,8 +32,8 @@ export default function BuildingCard({ building, targetLevel, progress, builtBy,
           onError={e => buildingIconFallback(e.currentTarget, building)}
         />
         <div className="flex-1 min-w-0">
-          <span className="block font-bold text-[16px] truncate">{building.name}</span>
-          <span className="text-slate-400 text-[13.5px]">
+          <span className="block font-bold text-base truncate">{building.name}</span>
+          <span className="text-slate-400 text-sm">
             Level{' '}
             <b className="text-slate-200 tabular-nums">
               {targetLevel ? `${building.level} → ${targetLevel}` : building.level}
@@ -44,7 +44,7 @@ export default function BuildingCard({ building, targetLevel, progress, builtBy,
 
       {building.beingBuilt && (
         <div className="mt-3">
-          <div className="flex items-center justify-between text-[12px]">
+          <div className="flex items-center justify-between text-xs">
             <span className="text-slate-400 truncate">
               {builtBy ? <>Built by <b className="text-accent-soft">{builtBy}</b></> : 'Queued, no builder yet'}
             </span>
@@ -59,7 +59,7 @@ export default function BuildingCard({ building, targetLevel, progress, builtBy,
           {counts.ok > 0 && <span className="sdot ok"><i /><b>{counts.ok}</b></span>}
           {counts.deliver > 0 && <span className="sdot deliver"><i /><b>{counts.deliver}</b></span>}
           {counts.missing > 0 && <span className="sdot missing"><i /><b>{counts.missing}</b></span>}
-          <span className="ml-auto text-[12px] text-slate-400">{required.length} items</span>
+          <span className="ml-auto text-xs text-slate-400">{required.length} items</span>
         </div>
       )}
     </article>

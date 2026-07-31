@@ -126,7 +126,7 @@ export function MapTab() {
         {m.mapReady && <MapLegend />}
       </div>
 
-      <p className="mt-3 text-[12.5px] text-slate-400">
+      <p className="mt-3 text-xs text-slate-400">
         Drag to pan, scroll to zoom. The map is drawn from chunks the server has loaded, so
         areas nobody has visited stay blank until they are.
       </p>

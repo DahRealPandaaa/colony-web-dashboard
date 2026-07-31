@@ -21,7 +21,7 @@ function PlayerAvatar({ profile }: { profile: WebUser }) {
   if (!profile.uuid || failed) {
     return (
       <span className="w-8 h-8 shrink-0 grid place-items-center rounded-lg bg-white/[0.06] border border-line
-                       text-[12px] font-bold uppercase text-accent-soft">
+                       text-xs font-bold uppercase text-accent-soft">
         {(profile.name || '?').slice(0, 2)}
       </span>
     )
@@ -82,8 +82,8 @@ export function Sidebar({ tabs, currentTab, onTabChange, profile, onSignOut, tab
           <div className="flex items-center gap-2.5 px-1">
             <PlayerAvatar profile={profile} />
             <span className="flex-1 min-w-0">
-              <span className="block text-[12.5px] font-semibold truncate">{profile.name}</span>
-              <span className="block text-[12px] text-slate-400">
+              <span className="block text-xs font-semibold truncate">{profile.name}</span>
+              <span className="block text-xs text-slate-400">
                 {profile.admin ? 'Operator' : `${num(colonyCount(profile))} colonies`}
               </span>
             </span>

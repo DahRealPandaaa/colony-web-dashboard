@@ -48,10 +48,10 @@ export function ResearchTab() {
           <div className="panel-body grid grid-auto-wide gap-2.5">
             {r.researchInProgress.map(entry => (
               <div key={entry.id} className="card card-active p-3!">
-                <div className="font-semibold text-[14.5px]">{entry.name}</div>
-                <div className="text-[12.5px] text-slate-400">{entry.branch} · tier {entry.depth}</div>
+                <div className="font-semibold text-sm">{entry.name}</div>
+                <div className="text-xs text-slate-400">{entry.branch} · tier {entry.depth}</div>
                 <Progress pct={pct(entry.progress, entry.maxProgress)} />
-                <div className="text-[11.5px] text-accent-soft font-bold tabular-nums mt-1.5">
+                <div className="text-xs text-accent-soft font-bold tabular-nums mt-1.5">
                   {pct(entry.progress, entry.maxProgress)}%
                 </div>
               </div>

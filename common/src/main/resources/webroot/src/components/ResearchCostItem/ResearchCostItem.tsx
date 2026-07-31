@@ -7,7 +7,7 @@ export default function ResearchCostItem({ item }: { item: ItemCount }) {
   const title = item.name + (item.craftable ? ' — the colony can craft this' : '')
 
   return (
-    <span className="inline-flex items-center gap-1 text-[12px] text-slate-400" title={title}>
+    <span className="inline-flex items-center gap-1 text-xs text-slate-400" title={title}>
       <img className="w-4 h-4 pixelated" loading="lazy" src={textureUrl(item.itemKey)} alt={item.name} />
       <b className="tabular-nums">{item.count}</b>
       {item.craftable && (
