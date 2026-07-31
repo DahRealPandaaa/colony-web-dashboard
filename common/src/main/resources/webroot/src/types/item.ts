@@ -24,6 +24,8 @@ export interface ItemInfo {
   craftedIn: string | null
   /** A colony worker knows a recipe that produces this. */
   craftable: boolean
+  /** DO shape/type, e.g. "Fancy"; null when the name already says it. */
+  variant: string | null
   components: MaterialComponent[]
 }
 

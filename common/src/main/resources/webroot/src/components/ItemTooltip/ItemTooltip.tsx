@@ -12,7 +12,7 @@ interface Props {
 
 export default function ItemTooltip({ item, lines, right, defaultExpanded }: Props) {
   const [expanded, setExpanded] = useState(false)
-  const hasMeta = !!(item.craftedIn || (item.components || []).length > 0 || lines)
+  const hasMeta = !!(item.craftedIn || item.variant || (item.components || []).length > 0 || lines)
   const isExpanded = defaultExpanded || expanded
 
   const borderColor = item.craftable
@@ -61,6 +61,11 @@ export default function ItemTooltip({ item, lines, right, defaultExpanded }: Pro
       {/* Expanded details: crafting info + extra lines */}
       {isExpanded && hasMeta && (
         <div className="flex flex-col gap-1 pt-2 mt-1.5 border-t border-line">
+          {item.variant && (
+            <div className="text-[10.5px] text-text-muted">
+              Type: <span className="text-text-secondary font-semibold">{item.variant}</span>
+            </div>
+          )}
           {item.craftedIn && (
             <div className="text-[10.5px] text-text-muted">
               Crafted in the <span className="text-text-secondary font-semibold">{item.craftedIn}</span>

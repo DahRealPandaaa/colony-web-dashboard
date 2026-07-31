@@ -21,7 +21,7 @@ export function useWarehouse() {
     let list = (snap.warehouse.stacks || []).slice()
 
     const query = whSearch.trim()
-    if (query) list = list.filter(s => matches(query, s.name, s.material))
+    if (query) list = list.filter(s => matches(query, s.name, s.material, s.variant))
 
     list.sort(whSort === 'alpha'
       ? (a, b) => (a.name || '').localeCompare(b.name || '')

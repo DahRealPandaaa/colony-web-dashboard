@@ -9,7 +9,7 @@ import java.util.concurrent.ConcurrentHashMap
 class PngCache(baseDir: Path) {
     companion object {
         private val LOGGER: Logger = LogUtils.getLogger()
-        private const val RENDER_VERSION = "3"
+        private const val RENDER_VERSION = "4"
         private const val VERSION_FILE = ".render-version"
     }
 

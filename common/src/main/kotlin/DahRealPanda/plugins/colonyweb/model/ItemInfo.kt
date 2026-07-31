@@ -15,5 +15,6 @@ open class ItemInfo(
     @JvmField var domum: Boolean = false,    // true for Domum Ornamentum textured blocks
     @JvmField var craftedIn: String? = null, // e.g. "Architects Cutter", null when unknown
     @JvmField var craftable: Boolean = false, // a colony worker knows a recipe that produces this
-    @JvmField var components: MutableList<MaterialComponent> = ArrayList()
+    @JvmField var components: MutableList<MaterialComponent> = ArrayList(),
+    @JvmField var variant: String? = null     // DO shape/type, e.g. "Fancy"; null when the name already says it
 )

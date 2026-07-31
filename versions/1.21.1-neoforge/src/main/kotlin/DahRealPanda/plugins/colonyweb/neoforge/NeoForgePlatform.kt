@@ -73,6 +73,10 @@ class NeoForgePlatform : Platform {
         return if (patch.isEmpty) null else patch.toString()
     }
 
+    override fun blockStateProperty(stack: ItemStack, property: String): String? {
+        return stack.get(DataComponents.BLOCK_STATE)?.properties()?.get(property)
+    }
+
     override fun armorPoints(stack: ItemStack): Int {
         return if (stack.item is ArmorItem) (stack.item as ArmorItem).defense else 0
     }

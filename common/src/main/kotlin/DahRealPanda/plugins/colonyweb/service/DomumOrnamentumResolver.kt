@@ -2,6 +2,7 @@ package DahRealPanda.plugins.colonyweb.service
 import java.util.Optional
 
 import DahRealPanda.plugins.colonyweb.util.MineColoniesReflect
+import DahRealPanda.plugins.colonyweb.util.Text
 import DahRealPanda.plugins.colonyweb.model.MaterialComponent
 import DahRealPanda.plugins.colonyweb.platform.Platform
 import net.minecraft.core.registries.BuiltInRegistries
@@ -11,13 +12,22 @@ import net.minecraft.resources.ResourceLocation
 import net.minecraft.world.item.BlockItem
 import net.minecraft.world.item.ItemStack
 import net.minecraft.world.level.block.Block
+import java.lang.reflect.Method
+import java.lang.reflect.Modifier
 import java.nio.charset.StandardCharsets
 import java.security.MessageDigest
+import java.util.Locale
 import java.util.TreeMap
 import java.util.concurrent.ConcurrentHashMap
 
 object DomumOrnamentumResolver {
     const val DO_NAMESPACE = "domum_ornamentum"
+
+    /** Java package every Domum Ornamentum class lives under, including its shape enums. */
+    private const val DO_PACKAGE = "com.ldtteam.domumornamentum"
+
+    /** Block class to the getter handing back its shape enum, resolved once per class. */
+    private val VARIANT_GETTER = ConcurrentHashMap<Class<*>, Optional<Method>>()
 
     private val VARIANT_MATERIAL = ConcurrentHashMap<String, String>()
 
@@ -44,20 +54,89 @@ object DomumOrnamentumResolver {
     fun textureKeyFor(stack: ItemStack): String {
         val rl = BuiltInRegistries.ITEM.getKey(stack.item)
         val base = if (rl != null) rl.toString() else "minecraft:air"
-        val fingerprint = if (isDomum(stack)) Platform.get().dataFingerprint(stack) else null
-        if (fingerprint != null) {
-            val hash = hash8(fingerprint)
-            if (hash != null) {
-                val key = "$base#$hash"
-                val components = componentMaterials(stack)
-                if (components.isNotEmpty()) {
-                    VARIANT_COMPONENTS.putIfAbsent(key, components)
-                    primaryMaterial(components)?.let { VARIANT_MATERIAL.putIfAbsent(key, it) }
-                }
-                return key
+        if (!isDomum(stack)) return base
+        val components = componentMaterials(stack)
+        val fingerprint = (if (components.isEmpty()) Platform.get().dataFingerprint(stack)
+                           else canonicalFingerprint(components)) ?: return base
+        val hash = hash8(fingerprint) ?: return base
+        val key = "$base#$hash"
+        if (components.isNotEmpty()) {
+            VARIANT_COMPONENTS.putIfAbsent(key, components)
+            primaryMaterial(components)?.let { VARIANT_MATERIAL.putIfAbsent(key, it) }
+        }
+        return key
+    }
+
+    /**
+     * The materials of a DO stack, and nothing else, as a stable string.
+     *
+     * Hashing the raw stack data instead makes the key depend on everything the stack happens to
+     * carry, so two stacks describing the same block with the same materials hash differently over
+     * an unrelated tag or an empty textureData compound (which is what MineColonies writes onto a
+     * cutter recipe's output) — the same block then caches twice and a taught recipe never matches
+     * the resource a builder asked for. Sorting also makes the key identical across loaders, where
+     * the same data arrives as NBT on 1.20.1 and as a data component on 1.21.
+     */
+    internal fun canonicalFingerprint(components: Map<String, String>): String =
+        TreeMap(components).entries.joinToString(";") { "${it.key}=${it.value}" }
+
+    /**
+     * The cut shape of a DO block, e.g. "Fancy" for a fancy framed light, or null when the block
+     * has none or [displayName] already spells it out. A whole family shares one item name — every
+     * framed light is "Framed <centre material>" — and only the shape tells them apart.
+     */
+    @JvmStatic
+    fun variantName(stack: ItemStack, displayName: String?): String? {
+        val item = stack.item
+        if (!isDomum(stack) || item !is BlockItem) return null
+        val variant = variantFromBlock(item.block)
+            // 1.20.1 stores the property value as the enum constant ("PLAIN"), 1.21 as its
+            // serialized name ("plain"); lower-casing first makes both humanize the same.
+            ?: Platform.get().blockStateProperty(stack, "type")
+                ?.let { Text.humanize(it.lowercase(Locale.ROOT)) }
+        if (variant.isNullOrBlank()) return null
+        if (displayName != null && displayName.lowercase(Locale.ROOT).contains(variant.lowercase(Locale.ROOT))) {
+            return null
+        }
+        return variant
+    }
+
+    /** The shape enum a block instance carries, read through its own getter. */
+    private fun variantFromBlock(block: Block): String? {
+        val getter = VARIANT_GETTER
+            .computeIfAbsent(block.javaClass) { findVariantGetter(it) }
+            .orElse(null) ?: return null
+        return try {
+            val value = getter.invoke(block) as? Enum<*> ?: return null
+            // The shape enums carry the wording DO's own tooltip uses; the rest name themselves.
+            val langName = MineColoniesReflect.invoke(value, "getLangName").orElse(null)
+            if (langName is String && langName.isNotBlank()) langName else Text.humanize(value.name)
+        } catch (t: Throwable) {
+            null
+        }
+    }
+
+    /**
+     * The getter is matched on its return type rather than its name: every family names it
+     * differently (getFramedLightType, getTimberFrameType, getType), but they all hand back an
+     * enum declared by Domum Ornamentum.
+     */
+    private fun findVariantGetter(blockClass: Class<*>): Optional<Method> {
+        var found: Method? = null
+        for (method in blockClass.methods) {
+            if (method.parameterCount != 0
+                || Modifier.isStatic(method.modifiers)
+                || !method.returnType.isEnum
+                || !method.returnType.name.startsWith(DO_PACKAGE)) {
+                continue
+            }
+            // getMethods() has no defined order, so a block exposing more than one would otherwise
+            // report a different shape from run to run. Name order is arbitrary but stable.
+            if (found == null || method.name < found.name) {
+                found = method
             }
         }
-        return base
+        return Optional.ofNullable(found)
     }
 
     @JvmStatic
