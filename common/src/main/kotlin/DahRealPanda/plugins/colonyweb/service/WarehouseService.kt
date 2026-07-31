@@ -11,47 +11,59 @@ import net.minecraft.world.item.ItemStack
 import java.util.LinkedHashMap
 
 class WarehouseService {
-    private val countedContainers = hashSetOf<BlockPos>()
-    private val byKey = LinkedHashMap<String, ColonySnapshot.Stack>()
+
+    /**
+     * Per-scan bookkeeping. These were once fields, and since the service is created once for the
+     * whole server that made the first scan the only one that ever counted anything (issue #38).
+     */
+    private class Tally {
+        /** Racks already counted, so one shared by two warehouse buildings is not counted twice. */
+        val countedContainers = hashSetOf<BlockPos>()
+
+        val byKey = LinkedHashMap<String, ColonySnapshot.Stack>()
+    }
 
     fun scan(rawBuildings: Collection<Any>, buildingResult: BuildingResult, level: ServerLevel?,
              warehouse: ColonySnapshot.Warehouse) {
+        val tally = Tally()
+        val buildings = BuildingService()
         for ((pos, building) in buildingResult.buildingByPos) {
-            if (!BuildingService().isWarehouse(building)) continue
+            if (!buildings.isWarehouse(building)) continue
             warehouse.present = true
             val raw = buildingResult.rawBuildingByPos[pos] ?: continue
-            addWarehouse(level, raw, pos, warehouse)
+            addWarehouse(level, raw, pos, warehouse, tally)
         }
     }
 
     private fun addWarehouse(level: ServerLevel?, building: Any, hutPos: BlockPos,
-                             warehouse: ColonySnapshot.Warehouse) {
-        for (handler in rackInventories(level, building, hutPos)) {
+                             warehouse: ColonySnapshot.Warehouse, tally: Tally) {
+        for (handler in rackInventories(level, building, hutPos, tally)) {
             for (slot in 0 until handler.getSlots()) {
                 val stack = handler.getStackInSlot(slot)
-                if (stack != null && !stack.isEmpty) add(warehouse, stack)
+                if (stack != null && !stack.isEmpty) add(warehouse, stack, tally)
             }
         }
     }
 
-    private fun add(warehouse: ColonySnapshot.Warehouse, stack: ItemStack) {
+    private fun add(warehouse: ColonySnapshot.Warehouse, stack: ItemStack, tally: Tally) {
         val key = DomumOrnamentumResolver.textureKeyFor(stack)
-        var aggregate = byKey[key]
+        var aggregate = tally.byKey[key]
         if (aggregate == null) {
             aggregate = ScanCoercion.fillItem(ColonySnapshot.Stack(), stack)
             aggregate.maxStackSize = maxOf(1, stack.maxStackSize)
-            byKey[key] = aggregate
+            tally.byKey[key] = aggregate
             warehouse.stacks.add(aggregate)
         }
         aggregate.count += stack.count
     }
 
-    private fun rackInventories(level: ServerLevel?, building: Any, hutPos: BlockPos): List<DahRealPanda.plugins.colonyweb.platform.ItemSlots> {
+    private fun rackInventories(level: ServerLevel?, building: Any, hutPos: BlockPos,
+                                tally: Tally): List<DahRealPanda.plugins.colonyweb.platform.ItemSlots> {
         val handlers = mutableListOf<DahRealPanda.plugins.colonyweb.platform.ItemSlots>()
         if (level == null) return handlers
         val platform = Platform.get()
         for (pos in containerPositions(building, hutPos)) {
-            if (!countedContainers.add(pos)) continue
+            if (!tally.countedContainers.add(pos)) continue
             val blockEntity = level.getBlockEntity(pos)
             if (blockEntity == null || !blockEntity.javaClass.simpleName.lowercase().contains("rack")) continue
             val ownInventory = invoke(blockEntity, "getInventory").orElse(null)
