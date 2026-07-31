@@ -50,6 +50,15 @@ sourceSets.main.resources {
             'webroot/vite.config.ts', 'webroot/.gitignore', 'webroot/old-style.css'
 }
 
+// The unit tests live beside the code they cover, in common/, and are pulled into every version
+// project the same way the main sources are. That means the whole suite runs once per target: the
+// shared code is compiled against two different Minecraft jars and two different JDKs, so a test
+// that only passes on one of them is a real failure rather than an accident of which target CI
+// happened to build.
+sourceSets.test.java.srcDir "$rootDir/common/src/test/java"
+sourceSets.test.kotlin.srcDir "$rootDir/common/src/test/kotlin"
+sourceSets.test.resources.srcDir "$rootDir/common/src/test/resources"
+
 // Expand ${...} placeholders in the mod metadata. Every property this version project declares
 // is available, so a metadata file can reference forge_version_range or neoforge_version_range
 // without this script knowing which loader it is dealing with. A missing property is an error.
@@ -151,5 +160,55 @@ repositories {
     maven {
         name = 'LDTTeam - Modding'
         url = 'https://ldtteam.jfrog.io/artifactory/modding/'
+    }
+}
+
+// ---- Tests ----
+// Plain JVM unit tests: no game is launched. The suite covers the loader-independent half of the
+// mod — auth, the HTTP-facing facades, the scan services and the pure helpers — which is the half
+// that lives in common/ and therefore the half both targets share.
+
+// ColonyWeb reads MineColonies entirely by reflection, precisely so it can load without it. The
+// tests run in that same world: the fakes they drive the scanners with answer to the MineColonies
+// method names, and nothing resolves a real MineColonies class. Leaving the real artifacts on the
+// test classpath would also make the two targets disagree — ForgeGradle puts its runtimeOnly deps
+// on testRuntimeClasspath, while ModDevGradle stages its dev mods into a folder instead.
+configurations.testRuntimeClasspath {
+    exclude group: 'com.ldtteam'
+    exclude group: 'thedarkcolour'
+}
+
+dependencies {
+    testImplementation "io.kotest:kotest-runner-junit5:${kotest_version}"
+    testImplementation "io.kotest:kotest-assertions-core:${kotest_version}"
+    testImplementation "io.mockk:mockk:${mockk_version}"
+
+    // The main source set only compiles against the Kotlin stdlib (Kotlin for Forge supplies it in
+    // game), but a unit test JVM has no mod loader, so the real artifact has to be on the test
+    // classpath rather than merely on the compile classpath.
+    testImplementation "org.jetbrains.kotlin:kotlin-stdlib-jdk8:${kotlin_version}"
+
+    // Gradle 9 will stop putting the launcher on the test runtime classpath implicitly.
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+}
+
+tasks.withType(Test).configureEach {
+    useJUnitPlatform()
+
+    testLogging {
+        events 'failed', 'skipped'
+        exceptionFormat 'full'
+        showStackTraces = true
+    }
+
+    // A green run that executed nothing is the failure mode this guards against: it is what a
+    // missing useJUnitPlatform(), a mis-wired source directory or a Kotest engine that failed to
+    // load all look like from the outside.
+    def testTask = delegate
+    afterSuite { descriptor, result ->
+        if (descriptor.parent == null && result.testCount == 0) {
+            throw new GradleException("${testTask.path} ran no tests — the test source set or the " +
+                    "JUnit platform engine is not wired up correctly")
+        }
     }
 }
