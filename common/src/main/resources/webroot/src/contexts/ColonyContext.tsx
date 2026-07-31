@@ -104,7 +104,9 @@ function readHash(): { colonyId: number | null; tab: TabId | null } {
 /** Keeps a ref in step with a value, so stable callbacks can read the latest one. */
 function useLatest<T>(value: T) {
   const ref = useRef(value)
-  ref.current = value
+  // Sync happens in an effect, not during render: ref writes in the render
+  // body are visible side effects that StrictMode double-invocation exposes.
+  useEffect(() => { ref.current = value }, [value])
   return ref
 }
 
@@ -280,7 +282,7 @@ export function ColonyProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (citizen) loadCitizenDetail()
     // Only when a different citizen is opened, not on every detail refresh.
-  }, [citizen?.id]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [citizen?.id])
 
   // ---- effects ----
 
@@ -350,14 +352,22 @@ export function ColonyProvider({ children }: { children: ReactNode }) {
     [colonies, colonyId],
   )
 
+  const value = useMemo(() => ({
+    colonies, colonyId, colony, snap, stats, citizens, research, combat, map, loaded, connection,
+    tab, setTab, tabCount,
+    selectColony, refresh,
+    building, openBuilding, closeBuilding,
+    citizen, citizenInventory, citizenEquipment, openCitizen, closeCitizen,
+  }), [
+    colonies, colonyId, colony, snap, stats, citizens, research, combat, map, loaded, connection,
+    tab, setTab, tabCount,
+    selectColony, refresh,
+    building, openBuilding, closeBuilding,
+    citizen, citizenInventory, citizenEquipment, openCitizen, closeCitizen,
+  ])
+
   return (
-    <ColonyContext.Provider value={{
-      colonies, colonyId, colony, snap, stats, citizens, research, combat, map, loaded, connection,
-      tab, setTab, tabCount,
-      selectColony, refresh,
-      building, openBuilding, closeBuilding,
-      citizen, citizenInventory, citizenEquipment, openCitizen, closeCitizen,
-    }}>
+    <ColonyContext.Provider value={value}>
       {children}
     </ColonyContext.Provider>
   )

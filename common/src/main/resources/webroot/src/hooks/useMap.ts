@@ -153,10 +153,8 @@ export function useMap() {
     if (dragging) {
       const nextX = clientX - dragFrom.current.x
       const nextZ = clientY - dragFrom.current.z
-      setMapView(prev => {
-        if (Math.abs(nextX - prev.panX) + Math.abs(nextZ - prev.panZ) > 3) dragMoved.current = true
-        return { ...prev, panX: nextX, panZ: nextZ }
-      })
+      if (Math.abs(nextX - panX) + Math.abs(nextZ - panZ) > 3) dragMoved.current = true
+      setMapView(prev => ({ ...prev, panX: nextX, panZ: nextZ }))
     }
 
     if (!map || !stage) return
