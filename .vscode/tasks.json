@@ -20,8 +20,8 @@
         {
             "label": "Minecraft: Run Client (Singleplayer)",
             "type": "process",
-            "command": "${workspaceFolder}\\gradlew.bat",
-            "args": [
+            "command": "${workspaceFolder}/gradlew",
+            "windows": { "command": "${workspaceFolder}\\gradlew.bat" },
                 ":versions:${input:mcVersion}:runClient",
                 "-PmcVersions=${input:mcVersion}",
                 "--console=plain"
