@@ -8,54 +8,59 @@ Players sign in with a pairing code from `/colonyweb sync` and only see colonies
 
 ## Features
 
-Seven tabs, every one of them live — colony data streams in over SSE, so nothing here needs a manual refresh.
+Eight tabs, every one of them live — colony data streams in over SSE, so nothing here needs a manual refresh.
 
-<!-- Screenshots live in docs/screenshots/. Every tab below already has its image line written
-     out and commented; add the matching PNG and uncomment the line to make it appear.
-     Keep them 850px wide or narrower — CurseForge reuses this page and clips anything wider.
-     docs/screenshots/README.md has the rest of the capture notes. -->
+![The Overview tab](docs/screenshots/overview.png)
 
 ### Overview
 
-Stat tiles for citizens, happiness, buildings, defence, warehouse and research, the builder roster, and every work order sorted by activity so whatever is moving sits at the top.
-
-<!-- ![The Overview tab](docs/screenshots/overview.png) -->
+The colony at a glance. Stat tiles for citizens, happiness, buildings, defence, warehouse and research sit above the builder roster, and every work order sorts by activity — whatever is moving sits at the top. Active research and builder assignments are right there so you always know what's happening.
 
 ### Map
 
-A pannable, zoomable top-down render of the colony, one pixel per block, with building pins and live citizen dots. Auto-fit and centre-on-town-hall controls, and toggles for buildings, citizens and labels.
+A pannable, zoomable top-down render of the colony at one pixel per block. Building pins mark every structure and live citizen dots move as they do. Toggle buildings, citizens and labels independently, auto-fit to the colony bounds, or snap straight to the town hall.
 
-<!-- ![The Map tab](docs/screenshots/map.png) -->
+![The Map tab](docs/screenshots/map.png)
 
 ### Buildings
 
-A card grid with search and sort (status, name, progress, level) plus in-progress and decoration filters. Click any card for a detail modal listing the resources that build still needs.
+Every building in the colony as a scannable card grid. Search by name, filter to in-progress builds or decorations, and sort by status, name, progress or level. Click any card to see exactly what resources it still needs — right down to the item count.
 
-<!-- ![The Buildings tab](docs/screenshots/buildings.png) -->
+![The Buildings tab](docs/screenshots/buildings.png)
+
+![Building detail modal — resources the build still needs](docs/screenshots/building-detail.png)
+
+### Needed
+
+A consolidated view of every resource currently needed across all in-progress builds, aggregated and deduplicated. Instead of clicking through individual buildings, see at a glance what the colony is short on — and exactly how many.
+
+![The Needed tab](docs/screenshots/needed.png)
 
 ### Citizens
 
-The full roster with a job filter and search. Each citizen opens into a skill breakdown, health and happiness meters, and their inventory and equipment.
+The full roster with a job filter and text search. Each citizen opens into a detail panel with their skill breakdown, health and happiness meters, and their inventory and equipment slots. See who is working, who is idle, and what they're carrying.
 
-<!-- ![The Citizens tab](docs/screenshots/citizens.png) -->
+![The Citizens tab](docs/screenshots/citizens.png)
+
+![Citizen detail — skills, health, inventory and equipment](docs/screenshots/citizen-detail.png)
 
 ### Research
 
-University branches drawn as progress bars, with state pills and item-cost icons for whatever each unlock wants.
+Every university branch drawn as progress bars with state pills — queued, in-progress or complete — and item-cost icons for whatever each unlock wants. Instantly see what's researching now and what's waiting behind it.
 
-<!-- ![The Research tab](docs/screenshots/research.png) -->
+![The Research tab](docs/screenshots/research.png)
 
 ### Combat
 
-Guard post staffing at a glance — ok, deliver or missing — with guard health and a raid banner counting the nights since the last attack.
+Guard post staffing at a glance — ok, delivery needed or missing — with individual guard health and a raid banner counting the nights since the last attack. Know whether your defences are ready before the next raid hits.
 
-<!-- ![The Combat tab](docs/screenshots/combat.png) -->
+![The Combat tab](docs/screenshots/combat.png)
 
 ### Warehouse
 
-Aggregated colony stock across every rack, searchable and sortable by count or alphabetically.
+Aggregated colony stock across every rack and hut block, searchable and sortable by count or alphabetically. Exactly what you'd open the warehouse hut to check, without walking there.
 
-<!-- ![The Warehouse tab](docs/screenshots/warehouse.png) -->
+![The Warehouse tab](docs/screenshots/warehouse.png)
 
 ---
 
