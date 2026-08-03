@@ -45,7 +45,7 @@ dependencies {
 
     implementation 'org.nanohttpd:nanohttpd:2.3.1'
     bundledLibs 'org.nanohttpd:nanohttpd:2.3.1'
-    bundledLibs 'org.slf4j:slf4j-api:2.0.9'
+    compileOnly 'org.slf4j:slf4j-api:2.0.9'
 
     devMods("com.ldtteam:minecolonies:${minecolonies_version}") { transitive = false }
     devMods("com.ldtteam:structurize:${structurize_version}") { transitive = false }
