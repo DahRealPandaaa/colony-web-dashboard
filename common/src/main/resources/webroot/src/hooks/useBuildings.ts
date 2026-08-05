@@ -71,9 +71,13 @@ export function useBuildings() {
       if (sort === 'name') return (a.name || '').localeCompare(b.name || '')
       if (sort === 'progress') return progressOf(b) - progressOf(a)
       if (sort === 'level') return b.level - a.level
-      // "status": in-progress first, then whatever is missing the most.
-      const inProgress = (b.beingBuilt ? 1 : 0) - (a.beingBuilt ? 1 : 0)
-      if (inProgress !== 0) return inProgress
+      // Actively worked on (builder assigned) first, then in queue, then idle.
+      const activity = (b: BuildingInfo) => {
+        const order = snap.workOrdersById[b.workOrderId]
+        return order && (order.builderId >= 0) ? 2 : b.beingBuilt ? 1 : 0
+      }
+      const byActivity = (activity(b) - activity(a))
+      if (byActivity !== 0) return byActivity
       return missingOf(b) - missingOf(a)
     })
   }, [snap.buildings, snap.workOrdersById, showDecorations, onlyInProgress, search, sort])
