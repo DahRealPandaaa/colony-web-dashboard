@@ -14,8 +14,8 @@ function devEntry(): Plugin {
     apply: 'serve',
     transformIndexHtml(html) {
       return html
-        .replace('<link rel="stylesheet" href="/style.css">', '')
-        .replace('src="/js/app.js"', 'src="/src/main.tsx"')
+        .replace('<link rel="stylesheet" href="style.css">', '')
+        .replace('src="js/app.js"', 'src="src/main.tsx"')
     },
   }
 }

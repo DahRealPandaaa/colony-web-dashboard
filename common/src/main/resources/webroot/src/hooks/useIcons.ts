@@ -6,17 +6,17 @@ import type { Post } from '../types/combat'
 /**
  * Artwork for buildings and citizens.
  *
- * The mod ships MineColonies wiki assets under /img/: the game's own block renders for
+ * The mod ships MineColonies wiki assets under img/: the game's own block renders for
  * buildings and decorations, and worker portraits for citizens. Not every block or job has art,
  * and the browser is the first to find out — so each <img> walks a fallback chain on error,
  * ending at a bundled placeholder that cannot itself fail. Licensing: img/ATTRIBUTION.md.
  */
 
 /** Shown when every other candidate 404s, so a card never renders a broken image. */
-const PLACEHOLDER = '/img/placeholder.svg'
+const PLACEHOLDER = 'img/placeholder.svg'
 
 /** Decorations are anchored by a deco controller rather than a hut block. */
-const DECORATION_BLOCK = '/img/blocks/decorationcontroller.png'
+const DECORATION_BLOCK = 'img/blocks/decorationcontroller.png'
 
 /**
  * Building types whose hut block is named differently.
@@ -75,12 +75,12 @@ function stepIcon(el: HTMLImageElement, candidates: IconCandidate[]) {
 export function buildingArt(building: Placeable): string {
   const block = pathOf(building.blockId)
   if (block && String(building.blockId).startsWith('minecolonies:')) {
-    return `/img/blocks/${block}.png`
+    return `img/blocks/${block}.png`
   }
   if (building.kind === 'decoration') return DECORATION_BLOCK
   const type = pathOf(building.type)
   if (type === 'decoration') return DECORATION_BLOCK
-  return type ? `/img/blocks/blockhut${HUT_ALIASES[type] || type}.png` : DECORATION_BLOCK
+  return type ? `img/blocks/blockhut${HUT_ALIASES[type] || type}.png` : DECORATION_BLOCK
 }
 
 /** Prefer the real MineColonies hut block placed at the site, rendered by the server. */
@@ -97,12 +97,12 @@ export function buildingIcon(building: Placeable): string {
 export function citizenArt(citizen: CitizenInfo): string {
   const gender = citizen.female ? 'female' : 'male'
   const job = pathOf(citizen.jobType)
-  return job ? `/img/jobs/${job}-${gender}.png` : citizenArtFallback(citizen)
+  return job ? `img/jobs/${job}-${gender}.png` : citizenArtFallback(citizen)
 }
 
 /** The generic settler portrait, for anyone unemployed or with no job art. */
 export function citizenArtFallback(citizen: CitizenInfo): string {
-  return `/img/jobs/_citizen-${citizen.female ? 'female' : 'male'}.png`
+  return `img/jobs/_citizen-${citizen.female ? 'female' : 'male'}.png`
 }
 
 export function citizenIcon(citizen: CitizenInfo): string {

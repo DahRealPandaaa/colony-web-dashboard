@@ -27,12 +27,12 @@ let authenticated = false
 
 // ---- Auth ----
 
-app.get('/auth/me', (_req, res) => {
+app.get('auth/me', (_req, res) => {
   if (authenticated) res.json({ authenticated: true, authEnabled: true, user: USER })
   else res.json({ authenticated: false, authEnabled: true })
 })
 
-app.post('/auth/login', (req, res) => {
+app.post('auth/login', (req, res) => {
   const code = (req.body && req.body.code) || ''
   if (code.replace(/[^A-Za-z0-9]/g, '').length >= 8) {
     authenticated = true
@@ -42,7 +42,7 @@ app.post('/auth/login', (req, res) => {
   }
 })
 
-app.post('/auth/logout', (_req, res) => {
+app.post('auth/logout', (_req, res) => {
   authenticated = false
   res.json({})
 })
@@ -55,24 +55,24 @@ function requireAuth(_req, res, next) {
   next()
 }
 
-app.get('/api/colonies', requireAuth, (_req, res) => res.json(data.COLONIES))
+app.get('api/colonies', requireAuth, (_req, res) => res.json(data.COLONIES))
 
-app.get('/api/colony/:id', requireAuth, (req, res) => {
+app.get('api/colony/:id', requireAuth, (req, res) => {
   res.json(data.snapshot(Number(req.params.id)))
 })
 
-app.get('/api/colony/:id/citizens', requireAuth, (req, res) => {
+app.get('api/colony/:id/citizens', requireAuth, (req, res) => {
   res.json(Number(req.params.id) === 1 ? data.CITIZENS : [])
 })
 
-app.get('/api/colony/:id/research', requireAuth, (req, res) => {
+app.get('api/colony/:id/research', requireAuth, (req, res) => {
   if (Number(req.params.id) !== 1) {
     return res.json({ available: false, branches: [], completed: 0, inProgress: 0, total: 0 })
   }
   res.json(data.RESEARCH)
 })
 
-app.get('/api/colony/:id/combat', requireAuth, (req, res) => {
+app.get('api/colony/:id/combat', requireAuth, (req, res) => {
   if (Number(req.params.id) !== 1) {
     return res.json({
       raidsPossible: false, underAttack: false, nightsSinceRaid: 0, raidLevel: 0,
@@ -83,7 +83,7 @@ app.get('/api/colony/:id/combat', requireAuth, (req, res) => {
   res.json(data.COMBAT)
 })
 
-app.get('/api/colony/:id/citizen/:cid', requireAuth, (req, res) => {
+app.get('api/colony/:id/citizen/:cid', requireAuth, (req, res) => {
   const citizen = data.CITIZENS.find(c => c.id === Number(req.params.cid))
   if (!citizen) return res.status(404).json({ error: 'Not found' })
   res.json({ citizen, inventory: data.INVENTORY, equipment: data.EQUIPMENT })
@@ -100,7 +100,7 @@ function chunksMapped() {
   return Math.min(CHUNKS_TOTAL, Math.floor((Date.now() - startedAt) / 150) + 40)
 }
 
-app.get('/api/colony/:id/map', requireAuth, (req, res) => {
+app.get('api/colony/:id/map', requireAuth, (req, res) => {
   if (Number(req.params.id) !== 1) {
     return res.json({
       available: false, ready: false, unavailableReason: 'No town hall has been placed yet.',
@@ -159,7 +159,7 @@ app.get(/^\/map\/(\d+)\.png$/, requireAuth, (req, res) => {
 
 /** A flat 16x16 swatch keyed off the item id, so different items look different. */
 const textureCache = new Map()
-app.get(/^\/textures\/(.+)\.png$/, requireAuth, (req, res) => {
+app.get(/^textures\/(.+)\.png$/, requireAuth, (req, res) => {
   const key = decodeURIComponent(req.params[0])
   if (!textureCache.has(key)) {
     let hash = 0

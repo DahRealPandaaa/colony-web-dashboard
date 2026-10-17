@@ -34,37 +34,37 @@ async function postForm(url: string, body?: Record<string, string>): Promise<Log
 }
 
 export function fetchSession(): Promise<SessionResponse> {
-  return getJson<SessionResponse>('/auth/me')
+  return getJson<SessionResponse>('auth/me')
 }
 
 export function loginWithCode(code: string): Promise<LoginResult> {
-  return postForm('/auth/login', { code })
+  return postForm('auth/login', { code })
 }
 
 export function logoutSession(): Promise<LoginResult> {
-  return postForm('/auth/logout')
+  return postForm('auth/logout')
 }
 
 export function fetchColonies(): Promise<ColonySummary[]> {
-  return getJson<ColonySummary[]>('/api/colonies')
+  return getJson<ColonySummary[]>('api/colonies')
 }
 
 export function fetchColonySnapshot(colonyId: number): Promise<ColonySnapshot> {
-  return getJson<ColonySnapshot>(`/api/colony/${colonyId}`)
+  return getJson<ColonySnapshot>(`api/colony/${colonyId}`)
 }
 
 export function fetchColonySection<T>(colonyId: number, section: string): Promise<T> {
-  return getJson<T>(`/api/colony/${colonyId}/${section}`)
+  return getJson<T>(`api/colony/${colonyId}/${section}`)
 }
 
 export function fetchCitizenDetail(colonyId: number, citizenId: number): Promise<CitizenDetail> {
-  return getJson<CitizenDetail>(`/api/colony/${colonyId}/citizen/${citizenId}`)
+  return getJson<CitizenDetail>(`api/colony/${colonyId}/citizen/${citizenId}`)
 }
 
 const RENDER_VERSION = '4'
 
 export function textureUrl(key: string): string {
-  return `/textures/${encodeURIComponent(key)}.png?v=${RENDER_VERSION}`
+  return `textures/${encodeURIComponent(key)}.png?v=${RENDER_VERSION}`
 }
 
 export { Unauthorized }
